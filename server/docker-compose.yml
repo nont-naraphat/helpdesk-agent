@@ -1,0 +1,19 @@
+version: "3.8"
+services:
+  helpdesk-agent:
+    build: .
+    container_name: helpdesk-agent
+    restart: unless-stopped
+    ports:
+      - "8097:8000"
+    volumes:
+      - /volume1/docker/helpdesk-agent/data:/data
+    environment:
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
+      - AGENT_SECRET=${AGENT_SECRET:-}
+      - DATA_DIR=/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
