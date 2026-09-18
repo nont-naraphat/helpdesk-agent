@@ -1,0 +1,24 @@
+# secrets / runtime
+.env
+server/data/
+*.db
+*.db-wal
+*.db-shm
+audit.log
+
+# agent runtime (never commit)
+token.dat
+agent.log
+install.log
+
+# packaging output
+output/
+*.intunewin
+
+# python
+__pycache__/
+*.pyc
+
+# os
+.DS_Store
+Thumbs.db

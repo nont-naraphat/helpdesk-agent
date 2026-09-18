@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Helpdesk Agent Portal</title>
+<style>
+:root {
+  --bg:        #0d1117;
+  --surface:   #161b22;
+  --surface2:  #1c2128;
+  --border:    #30363d;
+  --text:      #e6edf3;
+  --muted:     #8b949e;
+  --accent:    #2563eb;
+  --accent-h:  #1d4ed8;
+  --green:     #22c55e;
+  --yellow:    #f59e0b;
+  --red:       #ef4444;
+  --purple:    #8b5cf6;
+  --orange:    #f97316;
+  --gray:      #6b7280;
+  --mono:      "Cascadia Code","Consolas","Courier New",monospace;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:14px; min-height:100vh; }
+a { color:var(--accent); text-decoration:none; cursor:pointer; }
+button { cursor:pointer; border:none; border-radius:6px; padding:6px 14px; font-size:13px; font-weight:500; transition:background .15s,opacity .15s; }
+button:disabled { opacity:.4; cursor:not-allowed; }
+input, textarea, select { background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:6px 10px; outline:none; width:100%; }
+input:focus, textarea:focus, select:focus { border-color:var(--accent); }
+textarea { font-family:var(--mono); resize:vertical; }
+table { border-collapse:collapse; width:100%; }
+th, td { padding:8px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
+th { font-weight:600; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
+tr:hover td { background:var(--surface2); }
+.btn-primary  { background:var(--accent); color:#fff; }
+.btn-primary:hover  { background:var(--accent-h); }
+.btn-danger   { background:var(--red); color:#fff; }
+.btn-danger:hover   { background:#dc2626; }
+.btn-ghost    { background:transparent; border:1px solid var(--border); color:var(--text); }
+.btn-ghost:hover    { background:var(--surface2); }
+.btn-sm { padding:3px 10px; font-size:12px; }
+
+/* ----- layout ----- */
+#login-page { display:flex; align-items:center; justify-content:center; min-height:100vh; }
+.login-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:40px; width:340px; }
+.login-card h1 { font-size:20px; margin-bottom:24px; display:flex; align-items:center; gap:8px; }
+.login-card input { margin-bottom:12px; }
+.login-err { color:var(--red); font-size:13px; margin-top:8px; display:none; }
+
+#app { display:none; display:flex; height:100vh; }
+#sidebar { width:200px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:16px 0; }
+.sidebar-brand { padding:0 16px 20px; font-weight:700; font-size:15px; }
+.sidebar-brand span { color:var(--accent); }
+.nav-link { display:flex; align-items:center; gap:8px; padding:8px 16px; cursor:pointer; color:var(--muted); border-radius:0; transition:background .1s,color .1s; }
+.nav-link:hover { background:var(--surface2); color:var(--text); }
+.nav-link.active { background:var(--surface2); color:var(--text); font-weight:600; }
+.sidebar-spacer { flex:1; }
+.sidebar-logout { padding:8px 16px; }
+#main-content { flex:1; overflow-y:auto; display:flex; flex-direction:column; }
+.page { display:none; flex:1; padding:24px; }
+.page.active { display:block; }
+.page-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
+.page-header h1 { font-size:18px; font-weight:700; }
+.page-header .spacer { flex:1; }
+.card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px; }
+
+/* ----- badges ----- */
+.badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
+.badge-pending_confirm { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+.badge-queued  { background:rgba(59,130,246,.15); color:#60a5fa; border:1px solid rgba(59,130,246,.3); }
+.badge-running { background:rgba(139,92,246,.15); color:#a78bfa; border:1px solid rgba(139,92,246,.3); animation:pulse 1.5s ease-in-out infinite; }
+.badge-done    { background:rgba(34,197,94,.15); color:#4ade80; border:1px solid rgba(34,197,94,.3); }
+.badge-failed  { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); }
+.badge-timeout { background:rgba(249,115,22,.15); color:#fb923c; border:1px solid rgba(249,115,22,.3); }
+.badge-cancelled { background:rgba(107,114,128,.15); color:#9ca3af; border:1px solid rgba(107,114,128,.3); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+/* ----- online dot ----- */
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
+.dot-online  { background:var(--green); box-shadow:0 0 6px var(--green); }
+.dot-warning { background:var(--yellow); }
+.dot-offline { background:var(--gray); }
+
+/* ----- device detail ----- */
+.detail-info { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
+.detail-info-item { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; }
+.detail-info-item .label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
+.detail-info-item .value { font-size:13px; font-weight:500; word-break:break-all; }
+.quick-cmds { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
+.quick-cmds button { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:12px; }
+.quick-cmds button:hover { border-color:var(--accent); color:var(--accent); }
+.shell-section { margin-bottom:20px; }
+.shell-section h3 { font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.4px; }
+
+/* ----- breadcrumb ----- */
+.breadcrumb { font-size:13px; color:var(--muted); margin-bottom:16px; }
+.breadcrumb a { color:var(--accent); cursor:pointer; }
+.breadcrumb span { margin:0 6px; }
+
+/* ----- search ----- */
+.search-row { display:flex; gap:8px; align-items:center; margin-bottom:16px; }
+.search-row input { max-width:280px; }
+
+/* ----- filter tabs ----- */
+.filter-tabs { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
+.filter-tab { background:var(--surface2); border:1px solid var(--border); color:var(--muted); padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer; }
+.filter-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
+
+/* ----- modals ----- */
+#modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100; display:none; align-items:center; justify-content:center; }
+#modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px; width:540px; max-width:95vw; max-height:85vh; overflow-y:auto; }
+.modal h2 { font-size:16px; font-weight:700; margin-bottom:16px; }
+.modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+.confirm-details { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:12px; font-size:13px; }
+.confirm-details strong { color:var(--accent); }
+.shell-warning { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.4); border-radius:8px; padding:12px; margin-bottom:12px; color:var(--red); font-size:12px; }
+.shell-preview { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:12px; font-family:var(--mono); font-size:12px; white-space:pre-wrap; word-break:break-all; max-height:200px; overflow-y:auto; }
+#result-content { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:14px; font-family:var(--mono); font-size:12px; line-height:1.6; white-space:pre-wrap; word-break:break-all; max-height:60vh; overflow-y:auto; }
+.result-meta { font-size:12px; color:var(--muted); margin-bottom:8px; }
+
+/* ----- audit ----- */
+.audit-entry { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
+.audit-ts { font-size:11px; color:var(--muted); white-space:nowrap; min-width:140px; font-family:var(--mono); }
+.audit-action { font-weight:600; font-size:12px; color:var(--accent); min-width:120px; }
+.audit-detail { font-size:12px; color:var(--muted); word-break:break-all; }
+
+/* ----- misc ----- */
+.empty-state { text-align:center; color:var(--muted); padding:60px 0; }
+.empty-state .icon { font-size:40px; margin-bottom:12px; }
+.spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.tag { display:inline-block; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-size:11px; font-family:var(--mono); }
+.cmd-type-shell { color:var(--orange); }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-page">
+  <div class="login-card">
+    <h1>🔧 <span>Helpdesk</span> Portal</h1>
+    <input type="password" id="login-pw" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-primary" style="width:100%;margin-top:4px" onclick="doLogin()">Sign In</button>
+    <div class="login-err" id="login-err">Wrong password</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <nav id="sidebar">
+    <div class="sidebar-brand">🔧 <span>Helpdesk</span></div>
+    <div class="nav-link active" onclick="navigate('devices')" id="nav-devices">🖥 Devices</div>
+    <div class="nav-link" onclick="navigate('queue')"   id="nav-queue">📋 Queue</div>
+    <div class="nav-link" onclick="navigate('audit')"   id="nav-audit">📝 Audit</div>
+    <div class="sidebar-spacer"></div>
+    <div class="sidebar-logout"><button class="btn-ghost" style="width:100%" onclick="doLogout()">Sign Out</button></div>
+  </nav>
+
+  <div id="main-content">
+
+    <!-- DEVICES LIST -->
+    <div id="page-devices" class="page active">
+      <div class="page-header">
+        <h1>Devices</h1>
+        <div class="spacer"></div>
+        <button class="btn-ghost btn-sm" onclick="loadDevices()">↻ Refresh</button>
+      </div>
+      <div class="search-row">
+        <input id="device-search" placeholder="Search hostname, username…" oninput="filterDevices()">
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table id="devices-table">
+          <thead><tr>
+            <th>Status</th><th>Hostname</th><th>User</th><th>IP</th>
+            <th>OS</th><th>Last Seen</th><th>Pending</th>
+          </tr></thead>
+          <tbody id="devices-tbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- DEVICE DETAIL -->
+    <div id="page-device" class="page">
+      <div class="breadcrumb"><a onclick="navigate('devices')">Devices</a><span>›</span><span id="detail-hostname-bc">…</span></div>
+      <div class="page-header">
+        <div id="detail-online-dot" class="dot dot-offline"></div>
+        <h1 id="detail-hostname">—</h1>
+        <div class="spacer"></div>
+        <button class="btn-ghost btn-sm" onclick="loadDevice(currentDevice)">↻ Refresh</button>
+      </div>
+
+      <div class="detail-info" id="detail-info"></div>
+
+      <div class="card">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;font-weight:600">Quick Commands</div>
+        <div class="quick-cmds" id="quick-cmds"></div>
+      </div>
+
+      <div class="card shell-section">
+        <h3>File Operations</h3>
+        <input id="file-path-input" placeholder="C:\ProgramData\SunPassion\helpdesk-agent\agent.log" style="font-family:var(--mono)">
+        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn-ghost btn-sm" onclick="queueFileOp('listdir')">📁 List Directory</button>
+          <button class="btn-ghost btn-sm" onclick="queueFileOp('readfile')">📄 Read File</button>
+          <button class="btn-primary btn-sm" onclick="queueFileOp('getfile')">⬇ Download File</button>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
+          Download File returns content only for paths inside the agent's allowlist; other paths are refused by the agent.
+        </div>
+      </div>
+
+      <div class="card shell-section">
+        <h3>PowerShell Command</h3>
+        <textarea id="shell-input" rows="4" placeholder="Write-Host 'hello'&#10;Get-Process | Select-Object -First 5"></textarea>
+        <div style="margin-top:8px;display:flex;justify-content:flex-end">
+          <button class="btn-primary btn-sm" onclick="queueShell()">Queue Shell Command</button>
+        </div>
+      </div>
+
+      <div class="card" style="padding:0;overflow:hidden">
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Command History</div>
+        <table>
+          <thead><tr><th>#</th><th>Type</th><th>Status</th><th>Created</th><th>Duration</th><th>Actions</th></tr></thead>
+          <tbody id="cmd-history-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No commands yet</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- QUEUE -->
+    <div id="page-queue" class="page">
+      <div class="page-header">
+        <h1>Command Queue</h1>
+        <div class="spacer"></div>
+        <button class="btn-ghost btn-sm" onclick="loadQueue(activeFilter)">↻ Refresh</button>
+      </div>
+      <div class="filter-tabs">
+        <div class="filter-tab active" onclick="loadQueue('')"              data-f="">All</div>
+        <div class="filter-tab" onclick="loadQueue('pending_confirm')"      data-f="pending_confirm">Pending Confirm</div>
+        <div class="filter-tab" onclick="loadQueue('queued')"               data-f="queued">Queued</div>
+        <div class="filter-tab" onclick="loadQueue('running')"              data-f="running">Running</div>
+        <div class="filter-tab" onclick="loadQueue('done')"                 data-f="done">Done</div>
+        <div class="filter-tab" onclick="loadQueue('failed,timeout')"       data-f="failed">Failed</div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <table>
+          <thead><tr><th>#</th><th>Device</th><th>Type</th><th>Status</th><th>Created</th><th>Completed</th><th>Actions</th></tr></thead>
+          <tbody id="queue-tbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- AUDIT -->
+    <div id="page-audit" class="page">
+      <div class="page-header">
+        <h1>Audit Log</h1>
+        <div class="spacer"></div>
+        <button class="btn-ghost btn-sm" onclick="loadAudit()">↻ Refresh</button>
+      </div>
+      <div class="card">
+        <div id="audit-list"><div class="empty-state"><div class="icon">📋</div>Loading…</div></div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app -->
+
+<!-- MODAL OVERLAY -->
+<div id="modal-overlay" onclick="overlayClick(event)">
+
+  <!-- CONFIRM MODAL -->
+  <div id="modal-confirm" class="modal" style="display:none">
+    <h2 id="confirm-title">Confirm Command</h2>
+    <div id="confirm-body"></div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
+      <button id="confirm-btn" class="btn-primary" onclick="doConfirm()">✓ Confirm Execute</button>
+    </div>
+  </div>
+
+  <!-- RESULT MODAL -->
+  <div id="modal-result" class="modal" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 id="result-title">Result</h2>
+      <button class="btn-ghost btn-sm" onclick="copyResult()">📋 Copy</button>
+    </div>
+    <div class="result-meta" id="result-meta"></div>
+    <pre id="result-content"></pre>
+    <div class="modal-footer"><button class="btn-ghost" onclick="closeModal()">Close</button></div>
+  </div>
+
+</div>
+
+<script>
+"use strict";
+
+// ------------------------------------------------------------------ state
+let currentDevice = null;
+let pendingConfirmId = null;
+let activeFilter = '';
+let allDevices = [];
+let refreshTimer = null;
+let cmdLabels = {};
+
+const COLLECTORS = [
+  {type:'sysinfo',   label:'🖥 System Info'},
+  {type:'netinfo',   label:'🌐 Network'},
+  {type:'eventlog',  label:'📋 Event Log'},
+  {type:'defender',  label:'🛡 Defender'},
+  {type:'updates',   label:'⬆ Updates'},
+  {type:'printers',  label:'🖨 Printers'},
+  {type:'processes', label:'⚙ Processes'},
+  {type:'wifi',      label:'📶 Wi-Fi'},
+  {type:'gpresult',  label:'📜 Group Policy'},
+  {type:'ping',      label:'📡 Ping…'},
+];
+
+// ------------------------------------------------------------------ api
+async function api(method, path, body) {
+  const opts = { method, headers: {'Content-Type':'application/json'} };
+  if (body !== undefined) opts.body = JSON.stringify(body);
+  const r = await fetch(path, opts);
+  if (r.status === 401) { showLogin(); return null; }
+  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+  return r.json();
+}
+
+// ------------------------------------------------------------------ time helpers
+function relTime(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso), now = new Date();
+  const s = Math.round((now - d) / 1000);
+  if (s < 5)   return 'just now';
+  if (s < 60)  return `${s}s ago`;
+  if (s < 3600) return `${Math.round(s/60)}m ago`;
+  if (s < 86400) return `${Math.round(s/3600)}h ago`;
+  return d.toLocaleDateString();
+}
+function duration(from, to) {
+  if (!from || !to) return '—';
+  const s = Math.round((new Date(to) - new Date(from)) / 1000);
+  if (s < 60) return `${s}s`;
+  return `${Math.round(s/60)}m ${s%60}s`;
+}
+function onlineStatus(lastSeen) {
+  if (!lastSeen) return 'offline';
+  const s = (Date.now() - new Date(lastSeen)) / 1000;
+  if (s < 120) return 'online';
+  if (s < 1800) return 'warning';
+  return 'offline';
+}
+
+// ------------------------------------------------------------------ badge
+function badge(status) {
+  const labels = {
+    pending_confirm:'Pending Confirm', queued:'Queued', running:'Running',
+    done:'Done', failed:'Failed', timeout:'Timeout', cancelled:'Cancelled',
+  };
+  return `<span class="badge badge-${status}">${labels[status]||status}</span>`;
+}
+
+// ------------------------------------------------------------------ nav
+function showLogin() {
+  document.getElementById('login-page').style.display='flex';
+  document.getElementById('app').style.display='none';
+}
+function showApp() {
+  document.getElementById('login-page').style.display='none';
+  document.getElementById('app').style.display='flex';
+}
+function navigate(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.getElementById('nav-'+page)?.classList.add('active');
+  clearInterval(refreshTimer);
+  if (page==='devices') loadDevices();
+  if (page==='queue')   loadQueue(activeFilter);
+  if (page==='audit')   loadAudit();
+}
+
+// ------------------------------------------------------------------ login
+async function doLogin() {
+  const pw = document.getElementById('login-pw').value;
+  try {
+    const r = await api('POST','/api/login',{password:pw});
+    if (r && r.ok) { showApp(); navigate('devices'); }
+  } catch {
+    const el = document.getElementById('login-err');
+    el.style.display='block';
+    setTimeout(()=>el.style.display='none', 2500);
+  }
+}
+async function doLogout() {
+  await api('POST','/api/logout');
+  showLogin();
+}
+
+// ------------------------------------------------------------------ devices
+async function loadDevices() {
+  try {
+    const {devices} = await api('GET','/api/devices') || {devices:[]};
+    allDevices = devices || [];
+    renderDevices(allDevices);
+  } catch(e) { console.error(e); }
+}
+function filterDevices() {
+  const q = document.getElementById('device-search').value.toLowerCase();
+  renderDevices(allDevices.filter(d=>
+    (d.hostname||'').toLowerCase().includes(q) ||
+    (d.username||'').toLowerCase().includes(q) ||
+    (d.last_ip||'').includes(q)
+  ));
+}
+function renderDevices(devices) {
+  const tb = document.getElementById('devices-tbody');
+  if (!devices.length) {
+    tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">🖥</div>No devices registered yet</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = devices.map(d=>{
+    const st = onlineStatus(d.last_seen);
+    return `<tr style="cursor:pointer" onclick="openDevice('${d.device_id}','${escHtml(d.hostname||d.device_id)}')">
+      <td><span class="dot dot-${st}"></span>${st}</td>
+      <td><strong>${escHtml(d.hostname||d.device_id)}</strong></td>
+      <td>${escHtml(d.username||'—')}</td>
+      <td>${escHtml(d.last_ip||'—')}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(d.os_version||'—')}</td>
+      <td>${relTime(d.last_seen)}</td>
+      <td>${d.pending_count>0?`<span class="badge badge-queued">${d.pending_count}</span>`:'—'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ------------------------------------------------------------------ device detail
+async function openDevice(deviceId, hostname) {
+  currentDevice = deviceId;
+  navigate('device');
+  document.getElementById('nav-devices').classList.add('active');
+  document.getElementById('detail-hostname').textContent = hostname;
+  document.getElementById('detail-hostname-bc').textContent = hostname;
+  await loadDevice(deviceId);
+  // auto-refresh if there are running commands
+  startDeviceAutoRefresh();
+}
+
+async function loadDevice(deviceId) {
+  if (!deviceId) return;
+  try {
+    const {commands, cmd_labels} = await api('GET',`/api/devices/${deviceId}/commands`) || {};
+    cmdLabels = cmd_labels || {};
+
+    // device info from allDevices cache
+    const dev = allDevices.find(d=>d.device_id===deviceId) || {};
+    renderDeviceInfo(dev, deviceId);
+    renderQuickCmds(deviceId);
+    renderCmdHistory(commands||[], deviceId);
+  } catch(e) { console.error(e); }
+}
+
+function renderDeviceInfo(dev, deviceId) {
+  const st = onlineStatus(dev.last_seen);
+  const dot = document.getElementById('detail-online-dot');
+  dot.className = `dot dot-${st}`;
+
+  const fields = [
+    ['Device ID', deviceId],
+    ['Hostname',  dev.hostname||'—'],
+    ['Username',  dev.username||'—'],
+    ['Domain',    dev.domain||'—'],
+    ['IP Address',dev.last_ip||'—'],
+    ['OS',        dev.os_version||'—'],
+    ['Agent',     dev.agent_version||'—'],
+    ['Last Seen', dev.last_seen ? new Date(dev.last_seen).toLocaleString() : '—'],
+    ['First Seen',dev.first_seen ? new Date(dev.first_seen).toLocaleString() : '—'],
+  ];
+  document.getElementById('detail-info').innerHTML = fields.map(([l,v])=>`
+    <div class="detail-info-item">
+      <div class="label">${l}</div>
+      <div class="value">${escHtml(String(v))}</div>
+    </div>`).join('');
+}
+
+function renderQuickCmds(deviceId) {
+  document.getElementById('quick-cmds').innerHTML = COLLECTORS.map(c=>`
+    <button onclick="queueCollector('${deviceId}','${c.type}')">${c.label}</button>
+  `).join('');
+}
+
+function renderCmdHistory(commands, deviceId) {
+  const tb = document.getElementById('cmd-history-tbody');
+  if (!commands.length) {
+    tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No commands yet. Use Quick Commands above.</td></tr>';
+    return;
+  }
+  tb.innerHTML = commands.map(c=>{
+    const label = cmdLabels[c.cmd_type] || c.cmd_type;
+    const isShell = c.cmd_type==='shell';
+    const dur = duration(c.picked_at, c.completed_at);
+    let actions = '';
+    if (c.status==='pending_confirm')
+      actions=`<button class="btn-primary btn-sm" onclick="event.stopPropagation();showDirectConfirm(${c.id},'${c.cmd_type}',${JSON.stringify(escHtml(c.payload||'{}'))})">✓ Confirm</button>
+               <button class="btn-ghost btn-sm" style="margin-left:4px" onclick="event.stopPropagation();doCancelCmd(${c.id})">✗</button>`;
+    else if (c.cmd_type==='getfile' && c.status==='done')
+      actions=`<button class="btn-primary btn-sm" onclick="event.stopPropagation();downloadFile(${c.id})">⬇ Download</button>
+               <button class="btn-ghost btn-sm" style="margin-left:4px" onclick="event.stopPropagation();viewResult(${c.id})">ℹ Info</button>`;
+    else if (['done','failed','timeout'].includes(c.status))
+      actions=`<button class="btn-ghost btn-sm" onclick="event.stopPropagation();viewResult(${c.id})">📄 Result</button>`;
+    return `<tr>
+      <td style="color:var(--muted);font-family:var(--mono);font-size:11px">#${c.id}</td>
+      <td><span class="tag ${isShell?'cmd-type-shell':''}">${label}</span></td>
+      <td>${badge(c.status)}</td>
+      <td style="color:var(--muted);font-size:12px">${relTime(c.created_at)}</td>
+      <td style="color:var(--muted);font-size:12px">${c.status==='running'?'<span class="spinner"></span>':dur}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+function startDeviceAutoRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(async()=>{
+    if (currentDevice) {
+      const {commands} = await api('GET',`/api/devices/${currentDevice}/commands`) || {};
+      if (commands) renderCmdHistory(commands, currentDevice);
+      const hasActive = (commands||[]).some(c=>['queued','running','pending_confirm'].includes(c.status));
+      if (!hasActive) clearInterval(refreshTimer);
+    }
+  }, 5000);
+}
+
+// ------------------------------------------------------------------ shell
+async function queueShell() {
+  const script = document.getElementById('shell-input').value.trim();
+  if (!script) { alert('Enter a PowerShell command first.'); return; }
+  if (!currentDevice) return;
+  try {
+    const {id} = await api('POST','/api/commands',{
+      device_id: currentDevice, cmd_type:'shell', payload:{script}
+    });
+    showConfirmModal(id, 'shell', {script});
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// ------------------------------------------------------------------ file ops
+async function queueFileOp(cmdType) {
+  if (!currentDevice) return;
+  const path = document.getElementById('file-path-input').value.trim();
+  if (!path) { alert('Enter a path first.'); return; }
+  try {
+    const {id} = await api('POST','/api/commands',{
+      device_id: currentDevice, cmd_type: cmdType, payload:{path}
+    });
+    showConfirmModal(id, cmdType, {path});
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// ------------------------------------------------------------------ queue collector
+async function queueCollector(deviceId, cmdType) {
+  let payload = {};
+  if (cmdType==='ping') {
+    const target = prompt('Ping target (hostname or IP):');
+    if (!target) return;
+    payload = {target};
+  }
+  try {
+    const {id} = await api('POST','/api/commands',{device_id:deviceId,cmd_type:cmdType,payload});
+    showConfirmModal(id, cmdType, payload);
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// ------------------------------------------------------------------ confirm modal
+function showConfirmModal(cmdId, cmdType, payload) {
+  pendingConfirmId = cmdId;
+  const isShell = cmdType==='shell';
+  const label = cmdLabels[cmdType] || cmdType;
+  const dev = allDevices.find(d=>d.device_id===currentDevice);
+  const hostname = dev?.hostname || currentDevice || 'this device';
+
+  document.getElementById('confirm-title').textContent =
+    isShell ? '⚠️ Confirm Shell Execution' : `Confirm: ${label}`;
+
+  let body = '';
+  if (isShell) {
+    body += `<div class="shell-warning">⚠️ <strong>Warning:</strong> This will execute arbitrary PowerShell on <strong>${escHtml(hostname)}</strong> as SYSTEM. Review the script carefully.</div>`;
+    body += `<div class="confirm-details">Script:<br><pre class="shell-preview">${escHtml(payload.script||'')}</pre></div>`;
+    document.getElementById('confirm-btn').className='btn-danger';
+    document.getElementById('confirm-btn').textContent='⚠️ Execute on '+escHtml(hostname);
+  } else if (cmdType==='getfile') {
+    body += `<div class="shell-warning">⬇️ <strong>File download:</strong> pulls a file off <strong>${escHtml(hostname)}</strong>. Only paths inside the agent's allowlist will return content; anything else is refused by the agent. This download is audit-logged.</div>`;
+    body += `<div class="confirm-details">Path: <strong>${escHtml(payload.path||'')}</strong></div>`;
+    document.getElementById('confirm-btn').className='btn-primary';
+    document.getElementById('confirm-btn').textContent='⬇ Confirm Download';
+  } else if (cmdType==='listdir' || cmdType==='readfile') {
+    body = `<div class="confirm-details">Run <strong>${label}</strong> on <strong>${escHtml(hostname)}</strong>?</div>`;
+    body += `<div class="confirm-details">Path: <strong>${escHtml(payload.path||'')}</strong></div>`;
+    document.getElementById('confirm-btn').className='btn-primary';
+    document.getElementById('confirm-btn').textContent='✓ Confirm Execute';
+  } else {
+    body = `<div class="confirm-details">Run <strong>${label}</strong> on <strong>${escHtml(hostname)}</strong>?</div>`;
+    if (payload.target) body += `<div class="confirm-details">Target: <strong>${escHtml(payload.target)}</strong></div>`;
+    document.getElementById('confirm-btn').className='btn-primary';
+    document.getElementById('confirm-btn').textContent='✓ Confirm Execute';
+  }
+  document.getElementById('confirm-body').innerHTML = body;
+
+  document.getElementById('modal-result').style.display='none';
+  document.getElementById('modal-confirm').style.display='block';
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+async function showDirectConfirm(cmdId, cmdType, payloadStr) {
+  let payload = {};
+  try { payload = JSON.parse(payloadStr); } catch {}
+  pendingConfirmId = cmdId;
+  showConfirmModal(cmdId, cmdType, payload);
+}
+
+async function doConfirm() {
+  if (!pendingConfirmId) return;
+  try {
+    await api('POST',`/api/commands/${pendingConfirmId}/confirm`);
+    closeModal();
+    if (currentDevice) { loadDevice(currentDevice); startDeviceAutoRefresh(); }
+    if (document.getElementById('page-queue').classList.contains('active')) loadQueue(activeFilter);
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+async function doCancelCmd(cmdId) {
+  if (!confirm('Cancel this command?')) return;
+  try {
+    await api('POST',`/api/commands/${cmdId}/cancel`);
+    if (currentDevice) loadDevice(currentDevice);
+    if (document.getElementById('page-queue').classList.contains('active')) loadQueue(activeFilter);
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+// ------------------------------------------------------------------ result modal
+async function viewResult(cmdId) {
+  try {
+    const {cmd_type,status,completed_at,result,exit_code} = await api('GET',`/api/commands/${cmdId}/result`) || {};
+    const label = cmdLabels[cmd_type] || cmd_type;
+    document.getElementById('result-title').textContent = `Result — ${label} #${cmdId}`;
+    document.getElementById('result-meta').textContent =
+      `Status: ${status} | Exit code: ${exit_code ?? '—'} | Completed: ${completed_at ? new Date(completed_at).toLocaleString() : '—'}`;
+
+    let text = result || '(no output)';
+    try {
+      const parsed = JSON.parse(text);
+      // Don't dump the whole base64 blob into the info view
+      if (cmd_type==='getfile' && parsed.b64) {
+        parsed.b64 = `[${parsed.size||0} bytes -- use the Download button]`;
+      }
+      text = JSON.stringify(parsed,null,2);
+    } catch {}
+    document.getElementById('result-content').textContent = text;
+
+    document.getElementById('modal-confirm').style.display='none';
+    document.getElementById('modal-result').style.display='block';
+    document.getElementById('modal-overlay').classList.add('open');
+  } catch(e) { alert('Error: '+e.message); }
+}
+
+function copyResult() {
+  const text = document.getElementById('result-content').textContent;
+  navigator.clipboard.writeText(text).catch(()=>{});
+}
+
+// Trigger a browser download of a completed getfile result. The session cookie
+// rides along automatically, and the server audit-logs the download.
+function downloadFile(cmdId) {
+  const a = document.createElement('a');
+  a.href = `/api/commands/${cmdId}/download`;
+  a.download = '';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// ------------------------------------------------------------------ queue page
+async function loadQueue(filter) {
+  activeFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(t=>{
+    t.classList.toggle('active', t.dataset.f===filter);
+  });
+  try {
+    const statuses = filter ? filter.split(',') : [];
+    // fetch for each status if multiple
+    let allCmds = [];
+    if (statuses.length > 1) {
+      for (const s of statuses) {
+        const r = await api('GET',`/api/commands?status=${s}&limit=100`) || {};
+        allCmds = allCmds.concat(r.commands||[]);
+        if (r.cmd_labels) cmdLabels = {...cmdLabels, ...r.cmd_labels};
+      }
+      allCmds.sort((a,b)=>b.id-a.id);
+    } else {
+      const url = filter ? `/api/commands?status=${filter}&limit=200` : '/api/commands?limit=200';
+      const r = await api('GET', url) || {};
+      allCmds = r.commands || [];
+      if (r.cmd_labels) cmdLabels = {...cmdLabels, ...r.cmd_labels};
+    }
+    renderQueue(allCmds);
+  } catch(e) { console.error(e); }
+}
+
+function renderQueue(commands) {
+  const tb = document.getElementById('queue-tbody');
+  if (!commands.length) {
+    tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">📋</div>No commands</div></td></tr>';
+    return;
+  }
+  tb.innerHTML = commands.map(c=>{
+    const label = cmdLabels[c.cmd_type]||c.cmd_type;
+    let actions = '';
+    if (c.status==='pending_confirm') {
+      let payload = {};
+      try { payload=JSON.parse(c.payload||'{}'); } catch {}
+      actions=`<button class="btn-primary btn-sm"
+        onclick="currentDevice='${c.device_id}';showConfirmModal(${c.id},'${c.cmd_type}',${JSON.stringify(payload)})">✓ Confirm</button>
+        <button class="btn-ghost btn-sm" style="margin-left:4px" onclick="doCancelCmd(${c.id})">✗ Cancel</button>`;
+    } else if (c.cmd_type==='getfile' && c.status==='done') {
+      actions=`<button class="btn-primary btn-sm" onclick="downloadFile(${c.id})">⬇ Download</button>`;
+    } else if (['done','failed','timeout'].includes(c.status)) {
+      actions=`<button class="btn-ghost btn-sm" onclick="viewResult(${c.id})">📄 Result</button>`;
+    }
+    return `<tr>
+      <td style="color:var(--muted);font-family:var(--mono);font-size:11px">#${c.id}</td>
+      <td><a onclick="openDevice('${c.device_id}','${escHtml(c.hostname||c.device_id)}')">${escHtml(c.hostname||c.device_id)}</a></td>
+      <td><span class="tag">${label}</span></td>
+      <td>${badge(c.status)}</td>
+      <td style="color:var(--muted);font-size:12px">${relTime(c.created_at)}</td>
+      <td style="color:var(--muted);font-size:12px">${relTime(c.completed_at)}</td>
+      <td>${actions}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ------------------------------------------------------------------ audit page
+async function loadAudit() {
+  try {
+    const {entries} = await api('GET','/api/audit') || {entries:[]};
+    const el = document.getElementById('audit-list');
+    if (!entries.length) {
+      el.innerHTML='<div class="empty-state"><div class="icon">📋</div>No audit entries</div>';
+      return;
+    }
+    el.innerHTML = entries.map(e=>`
+      <div class="audit-entry">
+        <div class="audit-ts">${new Date(e.ts).toLocaleString()}</div>
+        <div class="audit-action">${escHtml(e.action)}</div>
+        <div class="audit-detail">${escHtml(JSON.stringify(e.detail))}</div>
+      </div>`).join('');
+  } catch(e) { console.error(e); }
+}
+
+// ------------------------------------------------------------------ modal helpers
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+  document.getElementById('modal-confirm').style.display='none';
+  document.getElementById('modal-result').style.display='none';
+  pendingConfirmId = null;
+}
+function overlayClick(e) {
+  if (e.target===document.getElementById('modal-overlay')) closeModal();
+}
+
+// ------------------------------------------------------------------ utils
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ------------------------------------------------------------------ init
+(async ()=>{
+  const {authed, open_mode} = await api('GET','/api/whoami') || {};
+  if (authed || open_mode) { showApp(); navigate('devices'); }
+  else showLogin();
+  document.getElementById('login-pw').addEventListener('keydown',e=>{
+    if(e.key==='Enter') doLogin();
+  });
+})();
+</script>
+</body>
+</html>
