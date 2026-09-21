@@ -17,6 +17,7 @@ All admin actions are audit-logged to /data/audit.log (JSON lines).
 ASCII-only comments (SunPassion convention).
 """
 
+import asyncio
 import base64
 import json
 import os
@@ -103,6 +104,13 @@ def db() -> sqlite3.Connection:
         );
         CREATE INDEX IF NOT EXISTS idx_cmd_device ON commands(device_id);
         CREATE INDEX IF NOT EXISTS idx_cmd_status  ON commands(status);
+        CREATE TABLE IF NOT EXISTS inventory (
+            device_id  TEXT NOT NULL,
+            kind       TEXT NOT NULL,
+            data       TEXT,
+            updated_at TEXT NOT NULL,
+            PRIMARY KEY (device_id, kind)
+        );
     """)
     conn.commit()
     return conn
@@ -211,14 +219,10 @@ async def agent_register(request: Request):
     return {"device_id": device_id, "token": token}
 
 
-@app.get("/api/agent/poll")
-async def agent_poll(request: Request, device_id: str = "", token: str = ""):
-    """Agent polls this every 30s. Returns the next queued command (if any)."""
-    if not device_id or not token:
-        raise HTTPException(400, "device_id and token required")
-
+def _claim_next_command(device_id: str, token: str, client_ip: str):
+    """Verify token, heartbeat, and atomically claim the oldest queued command.
+    Returns (cmd_dict_or_None, bad_token_bool)."""
     now = datetime.now(timezone.utc).isoformat()
-
     with _db_lock:
         conn = db()
         dev = conn.execute(
@@ -226,39 +230,61 @@ async def agent_poll(request: Request, device_id: str = "", token: str = ""):
         ).fetchone()
         if not dev or dev["token"] != token:
             conn.close()
-            raise HTTPException(403, "bad token")
-
-        # Heartbeat
+            return None, True
         conn.execute(
             "UPDATE devices SET last_seen=?, last_ip=? WHERE device_id=?",
-            (now, request.client.host if request.client else "", device_id)
+            (now, client_ip, device_id)
         )
-
-        # Get oldest queued command for this device
         cmd = conn.execute("""
-            SELECT id, cmd_type, payload
-            FROM commands
+            SELECT id, cmd_type, payload FROM commands
             WHERE device_id=? AND status='queued'
             ORDER BY id ASC LIMIT 1
         """, (device_id,)).fetchone()
-
         if cmd:
             conn.execute(
                 "UPDATE commands SET status='running', picked_at=? WHERE id=?",
                 (now, cmd["id"])
             )
-
         conn.commit()
+        result = None
+        if cmd:
+            result = {
+                "id":      cmd["id"],
+                "type":    cmd["cmd_type"],
+                "payload": json.loads(cmd["payload"] or "{}"),
+                "timeout": CMD_TIMEOUT.get(cmd["cmd_type"], 60),
+            }
         conn.close()
+        return result, False
 
-    if cmd:
-        return {"command": {
-            "id":      cmd["id"],
-            "type":    cmd["cmd_type"],
-            "payload": json.loads(cmd["payload"] or "{}"),
-            "timeout": CMD_TIMEOUT.get(cmd["cmd_type"], 60),
-        }}
-    return {"command": None}
+
+# How long the server holds a poll open waiting for a command (long-poll).
+# Makes interactive browsing/shell feel near-instant instead of waiting a full
+# poll interval. Kept short enough to be scalable across the fleet.
+LONGPOLL_SECONDS = 20
+
+
+@app.get("/api/agent/poll")
+async def agent_poll(request: Request, device_id: str = "", token: str = ""):
+    """Long-poll: returns immediately if a command is queued, otherwise holds
+    the connection up to LONGPOLL_SECONDS, checking once a second."""
+    if not device_id or not token:
+        raise HTTPException(400, "device_id and token required")
+
+    client_ip = request.client.host if request.client else ""
+    deadline = time.time() + LONGPOLL_SECONDS
+    first = True
+    while True:
+        cmd, bad = _claim_next_command(device_id, token, client_ip)
+        if bad:
+            raise HTTPException(403, "bad token")
+        if cmd:
+            return {"command": cmd}
+        if time.time() >= deadline:
+            return {"command": None}
+        # Heartbeat only needs to happen once; then just wait.
+        first = False
+        await asyncio.sleep(1)
 
 
 @app.post("/api/agent/result")
@@ -290,9 +316,64 @@ async def agent_result(request: Request):
 
     return {"ok": True}
 
+
+@app.post("/api/agent/inventory")
+async def agent_inventory(request: Request):
+    """Agent pushes an inventory snapshot (auto-report). Body:
+    {device_id, token, items: {kind: <json string>, ...}}. Upsert per kind."""
+    body      = await request.json()
+    device_id = body.get("device_id", "")
+    token     = body.get("token", "")
+    items     = body.get("items", {}) or {}
+
+    now = datetime.now(timezone.utc).isoformat()
+    with _db_lock:
+        conn = db()
+        dev = conn.execute(
+            "SELECT token FROM devices WHERE device_id=?", (device_id,)
+        ).fetchone()
+        if not dev or dev["token"] != token:
+            conn.close()
+            raise HTTPException(403, "bad token")
+        conn.execute(
+            "UPDATE devices SET last_seen=?, last_ip=? WHERE device_id=?",
+            (now, request.client.host if request.client else "", device_id)
+        )
+        for kind, data in items.items():
+            if not isinstance(data, str):
+                data = json.dumps(data, ensure_ascii=False)
+            conn.execute("""
+                INSERT INTO inventory (device_id, kind, data, updated_at)
+                VALUES (?,?,?,?)
+                ON CONFLICT(device_id, kind) DO UPDATE SET
+                    data=excluded.data, updated_at=excluded.updated_at
+            """, (device_id, kind, data, now))
+        conn.commit()
+        conn.close()
+    return {"ok": True, "stored": list(items.keys())}
+
 # ============================================================== admin API
 
-@app.get("/api/devices")
+@app.get("/api/devices/{device_id}/inventory")
+async def get_device_inventory(request: Request, device_id: str):
+    """Latest auto-reported inventory snapshots for the dashboard."""
+    require_auth(request)
+    conn = db()
+    rows = conn.execute(
+        "SELECT kind, data, updated_at FROM inventory WHERE device_id=?",
+        (device_id,)
+    ).fetchall()
+    conn.close()
+    inv = {}
+    for r in rows:
+        try:
+            parsed = json.loads(r["data"]) if r["data"] else None
+        except Exception:
+            parsed = r["data"]
+        inv[r["kind"]] = {"data": parsed, "updated_at": r["updated_at"]}
+    return {"inventory": inv}
+
+
 async def get_devices(request: Request):
     require_auth(request)
     conn = db()
@@ -353,12 +434,15 @@ async def get_commands(request: Request, status: str = "", limit: int = 200):
 
 @app.post("/api/commands")
 async def create_command(request: Request):
-    """Create a command in pending_confirm state."""
+    """Create a command. With confirm=true it goes straight to 'queued' (used by
+    the live dashboard); otherwise it waits in 'pending_confirm'. Either way it
+    is audit-logged, and getfile is still gated by the agent's allowlist."""
     require_auth(request)
     body      = await request.json()
     device_id = body.get("device_id", "")
     cmd_type  = body.get("cmd_type", "")
     payload   = body.get("payload", {})
+    immediate = bool(body.get("confirm", False))
 
     if not device_id or not cmd_type:
         raise HTTPException(400, "device_id and cmd_type required")
@@ -366,21 +450,23 @@ async def create_command(request: Request):
         raise HTTPException(400, f"unknown cmd_type: {cmd_type}")
 
     now = datetime.now(timezone.utc).isoformat()
+    status = "queued" if immediate else "pending_confirm"
     with _db_lock:
         conn = db()
         cur = conn.execute("""
-            INSERT INTO commands (device_id, cmd_type, payload, status, created_at)
-            VALUES (?,?,?,'pending_confirm',?)
-        """, (device_id, cmd_type, json.dumps(payload), now))
+            INSERT INTO commands (device_id, cmd_type, payload, status, created_at, confirmed_at)
+            VALUES (?,?,?,?,?,?)
+        """, (device_id, cmd_type, json.dumps(payload), status, now,
+              now if immediate else None))
         cmd_id = cur.lastrowid
         conn.commit()
         conn.close()
 
     audit("command.create", {
         "id": cmd_id, "device_id": device_id,
-        "cmd_type": cmd_type, "payload": payload,
+        "cmd_type": cmd_type, "payload": payload, "immediate": immediate,
     })
-    return {"id": cmd_id, "status": "pending_confirm"}
+    return {"id": cmd_id, "status": status}
 
 
 @app.post("/api/commands/{cmd_id}/confirm")

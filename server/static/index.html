@@ -3,783 +3,483 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Helpdesk Agent Portal</title>
+<title>Helpdesk Endpoint Console</title>
 <style>
-:root {
-  --bg:        #0d1117;
-  --surface:   #161b22;
-  --surface2:  #1c2128;
-  --border:    #30363d;
-  --text:      #e6edf3;
-  --muted:     #8b949e;
-  --accent:    #2563eb;
-  --accent-h:  #1d4ed8;
-  --green:     #22c55e;
-  --yellow:    #f59e0b;
-  --red:       #ef4444;
-  --purple:    #8b5cf6;
-  --orange:    #f97316;
-  --gray:      #6b7280;
-  --mono:      "Cascadia Code","Consolas","Courier New",monospace;
+:root{
+  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
+  --text:#e6edf3;--muted:#8b949e;--accent:#2563eb;--accent-h:#1d4ed8;
+  --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--purple:#8b5cf6;--gray:#6b7280;
+  --mono:"Cascadia Code","Consolas","Courier New",monospace;
 }
-* { box-sizing:border-box; margin:0; padding:0; }
-body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,"Segoe UI",sans-serif; font-size:14px; min-height:100vh; }
-a { color:var(--accent); text-decoration:none; cursor:pointer; }
-button { cursor:pointer; border:none; border-radius:6px; padding:6px 14px; font-size:13px; font-weight:500; transition:background .15s,opacity .15s; }
-button:disabled { opacity:.4; cursor:not-allowed; }
-input, textarea, select { background:var(--surface2); border:1px solid var(--border); border-radius:6px; color:var(--text); font-size:13px; padding:6px 10px; outline:none; width:100%; }
-input:focus, textarea:focus, select:focus { border-color:var(--accent); }
-textarea { font-family:var(--mono); resize:vertical; }
-table { border-collapse:collapse; width:100%; }
-th, td { padding:8px 12px; border-bottom:1px solid var(--border); text-align:left; vertical-align:top; }
-th { font-weight:600; color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.4px; }
-tr:hover td { background:var(--surface2); }
-.btn-primary  { background:var(--accent); color:#fff; }
-.btn-primary:hover  { background:var(--accent-h); }
-.btn-danger   { background:var(--red); color:#fff; }
-.btn-danger:hover   { background:#dc2626; }
-.btn-ghost    { background:transparent; border:1px solid var(--border); color:var(--text); }
-.btn-ghost:hover    { background:var(--surface2); }
-.btn-sm { padding:3px 10px; font-size:12px; }
-
-/* ----- layout ----- */
-#login-page { display:flex; align-items:center; justify-content:center; min-height:100vh; }
-.login-card { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:40px; width:340px; }
-.login-card h1 { font-size:20px; margin-bottom:24px; display:flex; align-items:center; gap:8px; }
-.login-card input { margin-bottom:12px; }
-.login-err { color:var(--red); font-size:13px; margin-top:8px; display:none; }
-
-#app { display:none; display:flex; height:100vh; }
-#sidebar { width:200px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:16px 0; }
-.sidebar-brand { padding:0 16px 20px; font-weight:700; font-size:15px; }
-.sidebar-brand span { color:var(--accent); }
-.nav-link { display:flex; align-items:center; gap:8px; padding:8px 16px; cursor:pointer; color:var(--muted); border-radius:0; transition:background .1s,color .1s; }
-.nav-link:hover { background:var(--surface2); color:var(--text); }
-.nav-link.active { background:var(--surface2); color:var(--text); font-weight:600; }
-.sidebar-spacer { flex:1; }
-.sidebar-logout { padding:8px 16px; }
-#main-content { flex:1; overflow-y:auto; display:flex; flex-direction:column; }
-.page { display:none; flex:1; padding:24px; }
-.page.active { display:block; }
-.page-header { display:flex; align-items:center; gap:12px; margin-bottom:20px; }
-.page-header h1 { font-size:18px; font-weight:700; }
-.page-header .spacer { flex:1; }
-.card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; margin-bottom:16px; }
-
-/* ----- badges ----- */
-.badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:600; }
-.badge-pending_confirm { background:rgba(245,158,11,.15); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
-.badge-queued  { background:rgba(59,130,246,.15); color:#60a5fa; border:1px solid rgba(59,130,246,.3); }
-.badge-running { background:rgba(139,92,246,.15); color:#a78bfa; border:1px solid rgba(139,92,246,.3); animation:pulse 1.5s ease-in-out infinite; }
-.badge-done    { background:rgba(34,197,94,.15); color:#4ade80; border:1px solid rgba(34,197,94,.3); }
-.badge-failed  { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); }
-.badge-timeout { background:rgba(249,115,22,.15); color:#fb923c; border:1px solid rgba(249,115,22,.3); }
-.badge-cancelled { background:rgba(107,114,128,.15); color:#9ca3af; border:1px solid rgba(107,114,128,.3); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-
-/* ----- online dot ----- */
-.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; }
-.dot-online  { background:var(--green); box-shadow:0 0 6px var(--green); }
-.dot-warning { background:var(--yellow); }
-.dot-offline { background:var(--gray); }
-
-/* ----- device detail ----- */
-.detail-info { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:12px; margin-bottom:20px; }
-.detail-info-item { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:12px; }
-.detail-info-item .label { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.4px; margin-bottom:4px; }
-.detail-info-item .value { font-size:13px; font-weight:500; word-break:break-all; }
-.quick-cmds { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:20px; }
-.quick-cmds button { background:var(--surface2); border:1px solid var(--border); color:var(--text); font-size:12px; }
-.quick-cmds button:hover { border-color:var(--accent); color:var(--accent); }
-.shell-section { margin-bottom:20px; }
-.shell-section h3 { font-size:13px; font-weight:600; color:var(--muted); margin-bottom:8px; text-transform:uppercase; letter-spacing:.4px; }
-
-/* ----- breadcrumb ----- */
-.breadcrumb { font-size:13px; color:var(--muted); margin-bottom:16px; }
-.breadcrumb a { color:var(--accent); cursor:pointer; }
-.breadcrumb span { margin:0 6px; }
-
-/* ----- search ----- */
-.search-row { display:flex; gap:8px; align-items:center; margin-bottom:16px; }
-.search-row input { max-width:280px; }
-
-/* ----- filter tabs ----- */
-.filter-tabs { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
-.filter-tab { background:var(--surface2); border:1px solid var(--border); color:var(--muted); padding:4px 12px; border-radius:6px; font-size:12px; cursor:pointer; }
-.filter-tab.active { background:var(--accent); border-color:var(--accent); color:#fff; }
-
-/* ----- modals ----- */
-#modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:100; display:none; align-items:center; justify-content:center; }
-#modal-overlay.open { display:flex; }
-.modal { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:28px; width:540px; max-width:95vw; max-height:85vh; overflow-y:auto; }
-.modal h2 { font-size:16px; font-weight:700; margin-bottom:16px; }
-.modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
-.confirm-details { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:14px; margin-bottom:12px; font-size:13px; }
-.confirm-details strong { color:var(--accent); }
-.shell-warning { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.4); border-radius:8px; padding:12px; margin-bottom:12px; color:var(--red); font-size:12px; }
-.shell-preview { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:12px; font-family:var(--mono); font-size:12px; white-space:pre-wrap; word-break:break-all; max-height:200px; overflow-y:auto; }
-#result-content { background:#0d1117; border:1px solid var(--border); border-radius:6px; padding:14px; font-family:var(--mono); font-size:12px; line-height:1.6; white-space:pre-wrap; word-break:break-all; max-height:60vh; overflow-y:auto; }
-.result-meta { font-size:12px; color:var(--muted); margin-bottom:8px; }
-
-/* ----- audit ----- */
-.audit-entry { display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border); align-items:flex-start; }
-.audit-ts { font-size:11px; color:var(--muted); white-space:nowrap; min-width:140px; font-family:var(--mono); }
-.audit-action { font-weight:600; font-size:12px; color:var(--accent); min-width:120px; }
-.audit-detail { font-size:12px; color:var(--muted); word-break:break-all; }
-
-/* ----- misc ----- */
-.empty-state { text-align:center; color:var(--muted); padding:60px 0; }
-.empty-state .icon { font-size:40px; margin-bottom:12px; }
-.spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:spin .6s linear infinite; vertical-align:middle; }
-@keyframes spin { to { transform:rotate(360deg); } }
-.tag { display:inline-block; background:var(--surface2); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-size:11px; font-family:var(--mono); }
-.cmd-type-shell { color:var(--orange); }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;min-height:100vh}
+a{color:var(--accent);text-decoration:none;cursor:pointer}
+button{cursor:pointer;border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;transition:background .15s,opacity .15s}
+button:disabled{opacity:.4;cursor:not-allowed}
+input,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:7px 10px;outline:none;width:100%}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{font-family:var(--mono);resize:vertical}
+table{border-collapse:collapse;width:100%}
+th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
+tr:hover td{background:var(--surface2)}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-h)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}.btn-ghost:hover{background:var(--surface2)}
+.btn-sm{padding:3px 10px;font-size:12px}
+#login-page{display:flex;align-items:center;justify-content:center;min-height:100vh}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;width:340px}
+.login-card h1{font-size:20px;margin-bottom:24px;display:flex;align-items:center;gap:8px}
+.login-card input{margin-bottom:12px}
+.login-err{color:var(--red);font-size:13px;margin-top:8px;display:none}
+#app{display:none;height:100vh}
+#app.on{display:flex}
+#sidebar{width:200px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0}
+.brand{padding:0 16px 20px;font-weight:700;font-size:15px}.brand span{color:var(--accent)}
+.nav{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;color:var(--muted)}
+.nav:hover{background:var(--surface2);color:var(--text)}
+.nav.active{background:var(--surface2);color:var(--text);font-weight:600}
+.spacer{flex:1}
+#main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.page{display:none;flex:1;padding:24px}
+.page.active{display:block}
+.phead{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+.phead h1{font-size:18px;font-weight:700}.phead .sp{flex:1}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
+.card h3{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.dot-online{background:var(--green);box-shadow:0 0 6px var(--green)}
+.dot-warning{background:var(--yellow)}.dot-offline{background:var(--gray)}
+.breadcrumb{font-size:13px;color:var(--muted);margin-bottom:16px}
+.breadcrumb a{color:var(--accent)}.breadcrumb span{margin:0 6px}
+.search-row{display:flex;gap:8px;align-items:center;margin-bottom:16px}
+.search-row input{max-width:300px}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{text-align:center;color:var(--muted);padding:50px 0}
+.empty .i{font-size:40px;margin-bottom:12px}
+/* inventory grid */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.inv-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.inv-card .h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-weight:600;font-size:13px}
+.inv-card .h .u{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
+.inv-card .b{padding:12px 14px;font-size:12.5px}
+.kv{display:flex;gap:8px;padding:3px 0}
+.kv .k{color:var(--muted);min-width:120px;flex-shrink:0}
+.kv .v{word-break:break-word}
+.mini-table{width:100%;font-size:12px}
+.mini-table td{padding:3px 6px;border-bottom:1px solid var(--border)}
+details.raw{margin-top:8px}
+details.raw summary{cursor:pointer;color:var(--muted);font-size:11px}
+details.raw pre{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto;margin-top:6px}
+/* detail info strip */
+.info-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+.info-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.info-item .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.info-item .v{font-size:13px;font-weight:500;word-break:break-word}
+/* tabs */
+.tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
+.tab{padding:8px 16px;cursor:pointer;color:var(--muted);font-size:13px;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--text);font-weight:600;border-bottom-color:var(--accent)}
+.tabpage{display:none}.tabpage.active{display:block}
+/* file browser */
+.fb-bar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
+.fb-bar input{flex:1;font-family:var(--mono)}
+.fb-crumb{font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px;word-break:break-all}
+.fb-crumb a{color:var(--accent)}
+.fb-table td{padding:6px 12px;font-size:13px}
+.fb-row-dir{cursor:pointer}
+.fb-row-dir:hover td{background:var(--surface2)}
+.fb-name{display:flex;align-items:center;gap:8px}
+.fb-actions{text-align:right;white-space:nowrap}
+.fb-note{font-size:11px;color:var(--muted);margin-top:8px}
+/* shell */
+.sh-out{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:14px;font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-all;max-height:52vh;overflow:auto;margin-top:12px;min-height:80px}
+.sh-warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:10px;font-size:12px;color:#fca5a5;margin-bottom:10px}
+.status-line{font-size:12px;color:var(--muted);margin:8px 0}
+/* audit */
+.audit{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.audit .ts{font-size:11px;color:var(--muted);white-space:nowrap;min-width:150px;font-family:var(--mono)}
+.audit .ac{font-weight:600;font-size:12px;color:var(--accent);min-width:130px}
+.audit .de{font-size:12px;color:var(--muted);word-break:break-all}
+.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;background:var(--surface2);border:1px solid var(--border)}
 </style>
 </head>
 <body>
 
-<!-- LOGIN -->
 <div id="login-page">
   <div class="login-card">
-    <h1>🔧 <span>Helpdesk</span> Portal</h1>
-    <input type="password" id="login-pw" placeholder="Password" onkeydown="if(event.key==='Enter')doLogin()">
+    <h1>🔧 <span>Endpoint</span> Console</h1>
+    <input type="password" id="login-pw" placeholder="Password">
     <button class="btn-primary" style="width:100%;margin-top:4px" onclick="doLogin()">Sign In</button>
     <div class="login-err" id="login-err">Wrong password</div>
   </div>
 </div>
 
-<!-- APP -->
 <div id="app">
   <nav id="sidebar">
-    <div class="sidebar-brand">🔧 <span>Helpdesk</span></div>
-    <div class="nav-link active" onclick="navigate('devices')" id="nav-devices">🖥 Devices</div>
-    <div class="nav-link" onclick="navigate('queue')"   id="nav-queue">📋 Queue</div>
-    <div class="nav-link" onclick="navigate('audit')"   id="nav-audit">📝 Audit</div>
-    <div class="sidebar-spacer"></div>
-    <div class="sidebar-logout"><button class="btn-ghost" style="width:100%" onclick="doLogout()">Sign Out</button></div>
+    <div class="brand">🔧 <span>Endpoint</span></div>
+    <div class="nav active" id="nav-devices" onclick="nav('devices')">🖥 Devices</div>
+    <div class="nav" id="nav-audit" onclick="nav('audit')">📝 Audit</div>
+    <div class="spacer"></div>
+    <div style="padding:8px 16px"><button class="btn-ghost" style="width:100%" onclick="doLogout()">Sign Out</button></div>
   </nav>
+  <div id="main">
 
-  <div id="main-content">
-
-    <!-- DEVICES LIST -->
+    <!-- DEVICES -->
     <div id="page-devices" class="page active">
-      <div class="page-header">
-        <h1>Devices</h1>
-        <div class="spacer"></div>
-        <button class="btn-ghost btn-sm" onclick="loadDevices()">↻ Refresh</button>
-      </div>
-      <div class="search-row">
-        <input id="device-search" placeholder="Search hostname, username…" oninput="filterDevices()">
-      </div>
+      <div class="phead"><h1>Devices</h1><div class="sp"></div>
+        <button class="btn-ghost btn-sm" onclick="loadDevices()">↻ Refresh</button></div>
+      <div class="search-row"><input id="dsearch" placeholder="Search hostname, user, IP…" oninput="renderDevices()"></div>
       <div class="card" style="padding:0;overflow:hidden">
-        <table id="devices-table">
-          <thead><tr>
-            <th>Status</th><th>Hostname</th><th>User</th><th>IP</th>
-            <th>OS</th><th>Last Seen</th><th>Pending</th>
-          </tr></thead>
-          <tbody id="devices-tbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">Loading…</td></tr></tbody>
-        </table>
+        <table><thead><tr>
+          <th>Status</th><th>Hostname</th><th>User</th><th>IP</th><th>OS</th><th>Last Report</th>
+        </tr></thead><tbody id="dtbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table>
       </div>
     </div>
 
     <!-- DEVICE DETAIL -->
     <div id="page-device" class="page">
-      <div class="breadcrumb"><a onclick="navigate('devices')">Devices</a><span>›</span><span id="detail-hostname-bc">…</span></div>
-      <div class="page-header">
-        <div id="detail-online-dot" class="dot dot-offline"></div>
-        <h1 id="detail-hostname">—</h1>
-        <div class="spacer"></div>
-        <button class="btn-ghost btn-sm" onclick="loadDevice(currentDevice)">↻ Refresh</button>
+      <div class="breadcrumb"><a onclick="nav('devices')">Devices</a><span>›</span><span id="d-host">…</span></div>
+      <div class="phead">
+        <span id="d-dot" class="dot dot-offline"></span><h1 id="d-title">—</h1><div class="sp"></div>
+        <button class="btn-ghost btn-sm" onclick="refreshInventory()">⟳ Collect Now</button>
+        <button class="btn-ghost btn-sm" onclick="openDevice(currentDevice,currentHost)">↻ Refresh</button>
+      </div>
+      <div class="info-strip" id="d-info"></div>
+      <div class="tabs">
+        <div class="tab active" data-t="inv"   onclick="tab('inv')">📊 Inventory</div>
+        <div class="tab"        data-t="files" onclick="tab('files')">📁 Files</div>
+        <div class="tab"        data-t="shell" onclick="tab('shell')">⌨ PowerShell</div>
       </div>
 
-      <div class="detail-info" id="detail-info"></div>
-
-      <div class="card">
-        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;font-weight:600">Quick Commands</div>
-        <div class="quick-cmds" id="quick-cmds"></div>
+      <div id="tab-inv" class="tabpage active">
+        <div id="inv-wrap"><div class="empty"><div class="i">📊</div>No inventory yet — the agent reports automatically, or click “Collect Now”.</div></div>
       </div>
 
-      <div class="card shell-section">
-        <h3>File Operations</h3>
-        <input id="file-path-input" placeholder="C:\ProgramData\SunPassion\helpdesk-agent\agent.log" style="font-family:var(--mono)">
-        <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-          <button class="btn-ghost btn-sm" onclick="queueFileOp('listdir')">📁 List Directory</button>
-          <button class="btn-ghost btn-sm" onclick="queueFileOp('readfile')">📄 Read File</button>
-          <button class="btn-primary btn-sm" onclick="queueFileOp('getfile')">⬇ Download File</button>
-        </div>
-        <div style="margin-top:8px;font-size:11px;color:var(--muted)">
-          Download File returns content only for paths inside the agent's allowlist; other paths are refused by the agent.
-        </div>
-      </div>
-
-      <div class="card shell-section">
-        <h3>PowerShell Command</h3>
-        <textarea id="shell-input" rows="4" placeholder="Write-Host 'hello'&#10;Get-Process | Select-Object -First 5"></textarea>
-        <div style="margin-top:8px;display:flex;justify-content:flex-end">
-          <button class="btn-primary btn-sm" onclick="queueShell()">Queue Shell Command</button>
+      <div id="tab-files" class="tabpage">
+        <div class="card">
+          <div class="fb-bar">
+            <button class="btn-ghost btn-sm" onclick="fbUp()" title="Up one level">⬆</button>
+            <input id="fb-path" placeholder="C:\" onkeydown="if(event.key==='Enter')fbGo(this.value)">
+            <button class="btn-primary btn-sm" onclick="fbGo(document.getElementById('fb-path').value)">Go</button>
+          </div>
+          <div class="fb-crumb" id="fb-crumb"></div>
+          <div id="fb-status" class="status-line"></div>
+          <table class="fb-table"><tbody id="fb-body"></tbody></table>
+          <div class="fb-note">Browsing &amp; reading text files is unrestricted. Downloading a file only works for paths inside the agent’s allowlist; other paths are refused by the agent and every download is logged.</div>
         </div>
       </div>
 
-      <div class="card" style="padding:0;overflow:hidden">
-        <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px">Command History</div>
-        <table>
-          <thead><tr><th>#</th><th>Type</th><th>Status</th><th>Created</th><th>Duration</th><th>Actions</th></tr></thead>
-          <tbody id="cmd-history-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No commands yet</td></tr></tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- QUEUE -->
-    <div id="page-queue" class="page">
-      <div class="page-header">
-        <h1>Command Queue</h1>
-        <div class="spacer"></div>
-        <button class="btn-ghost btn-sm" onclick="loadQueue(activeFilter)">↻ Refresh</button>
-      </div>
-      <div class="filter-tabs">
-        <div class="filter-tab active" onclick="loadQueue('')"              data-f="">All</div>
-        <div class="filter-tab" onclick="loadQueue('pending_confirm')"      data-f="pending_confirm">Pending Confirm</div>
-        <div class="filter-tab" onclick="loadQueue('queued')"               data-f="queued">Queued</div>
-        <div class="filter-tab" onclick="loadQueue('running')"              data-f="running">Running</div>
-        <div class="filter-tab" onclick="loadQueue('done')"                 data-f="done">Done</div>
-        <div class="filter-tab" onclick="loadQueue('failed,timeout')"       data-f="failed">Failed</div>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table>
-          <thead><tr><th>#</th><th>Device</th><th>Type</th><th>Status</th><th>Created</th><th>Completed</th><th>Actions</th></tr></thead>
-          <tbody id="queue-tbody"><tr><td colspan="7" style="text-align:center;color:var(--muted);padding:40px">Loading…</td></tr></tbody>
-        </table>
+      <div id="tab-shell" class="tabpage">
+        <div class="card">
+          <div class="sh-warn">⚠️ Commands run as SYSTEM on this device and are audit-logged.</div>
+          <textarea id="sh-input" rows="4" placeholder="Get-Service | Where-Object Status -eq 'Running' | Select-Object -First 10"></textarea>
+          <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:8px">
+            <button class="btn-ghost btn-sm" onclick="document.getElementById('sh-out').textContent='';">Clear</button>
+            <button class="btn-primary btn-sm" id="sh-run" onclick="shellRun()">▶ Run</button>
+          </div>
+          <div id="sh-status" class="status-line"></div>
+          <pre class="sh-out" id="sh-out"></pre>
+        </div>
       </div>
     </div>
 
     <!-- AUDIT -->
     <div id="page-audit" class="page">
-      <div class="page-header">
-        <h1>Audit Log</h1>
-        <div class="spacer"></div>
-        <button class="btn-ghost btn-sm" onclick="loadAudit()">↻ Refresh</button>
-      </div>
-      <div class="card">
-        <div id="audit-list"><div class="empty-state"><div class="icon">📋</div>Loading…</div></div>
-      </div>
+      <div class="phead"><h1>Audit Log</h1><div class="sp"></div>
+        <button class="btn-ghost btn-sm" onclick="loadAudit()">↻ Refresh</button></div>
+      <div class="card"><div id="audit-list"><div class="empty">Loading…</div></div></div>
     </div>
 
-  </div><!-- /main-content -->
-</div><!-- /app -->
-
-<!-- MODAL OVERLAY -->
-<div id="modal-overlay" onclick="overlayClick(event)">
-
-  <!-- CONFIRM MODAL -->
-  <div id="modal-confirm" class="modal" style="display:none">
-    <h2 id="confirm-title">Confirm Command</h2>
-    <div id="confirm-body"></div>
-    <div class="modal-footer">
-      <button class="btn-ghost" onclick="closeModal()">Cancel</button>
-      <button id="confirm-btn" class="btn-primary" onclick="doConfirm()">✓ Confirm Execute</button>
-    </div>
   </div>
-
-  <!-- RESULT MODAL -->
-  <div id="modal-result" class="modal" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <h2 id="result-title">Result</h2>
-      <button class="btn-ghost btn-sm" onclick="copyResult()">📋 Copy</button>
-    </div>
-    <div class="result-meta" id="result-meta"></div>
-    <pre id="result-content"></pre>
-    <div class="modal-footer"><button class="btn-ghost" onclick="closeModal()">Close</button></div>
-  </div>
-
 </div>
 
 <script>
 "use strict";
+let currentDevice=null,currentHost=null,allDevices=[],fbPath="C:\\",invTimer=null;
 
-// ------------------------------------------------------------------ state
-let currentDevice = null;
-let pendingConfirmId = null;
-let activeFilter = '';
-let allDevices = [];
-let refreshTimer = null;
-let cmdLabels = {};
-
-const COLLECTORS = [
-  {type:'sysinfo',   label:'🖥 System Info'},
-  {type:'netinfo',   label:'🌐 Network'},
-  {type:'eventlog',  label:'📋 Event Log'},
-  {type:'defender',  label:'🛡 Defender'},
-  {type:'updates',   label:'⬆ Updates'},
-  {type:'printers',  label:'🖨 Printers'},
-  {type:'processes', label:'⚙ Processes'},
-  {type:'wifi',      label:'📶 Wi-Fi'},
-  {type:'gpresult',  label:'📜 Group Policy'},
-  {type:'ping',      label:'📡 Ping…'},
-];
-
-// ------------------------------------------------------------------ api
-async function api(method, path, body) {
-  const opts = { method, headers: {'Content-Type':'application/json'} };
-  if (body !== undefined) opts.body = JSON.stringify(body);
-  const r = await fetch(path, opts);
-  if (r.status === 401) { showLogin(); return null; }
-  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+async function api(method,path,body){
+  const o={method,headers:{'Content-Type':'application/json'}};
+  if(body!==undefined)o.body=JSON.stringify(body);
+  const r=await fetch(path,o);
+  if(r.status===401){showLogin();return null;}
+  if(!r.ok)throw new Error(await r.text());
   return r.json();
 }
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function relTime(iso){if(!iso)return'—';const s=Math.round((Date.now()-new Date(iso))/1000);
+  if(s<5)return'just now';if(s<60)return s+'s ago';if(s<3600)return Math.round(s/60)+'m ago';
+  if(s<86400)return Math.round(s/3600)+'h ago';return new Date(iso).toLocaleDateString();}
+function onlineStatus(ls){if(!ls)return'offline';const s=(Date.now()-new Date(ls))/1000;
+  if(s<120)return'online';if(s<1800)return'warning';return'offline';}
 
-// ------------------------------------------------------------------ time helpers
-function relTime(iso) {
-  if (!iso) return '—';
-  const d = new Date(iso), now = new Date();
-  const s = Math.round((now - d) / 1000);
-  if (s < 5)   return 'just now';
-  if (s < 60)  return `${s}s ago`;
-  if (s < 3600) return `${Math.round(s/60)}m ago`;
-  if (s < 86400) return `${Math.round(s/3600)}h ago`;
-  return d.toLocaleDateString();
+/* ---- nav ---- */
+function showLogin(){document.getElementById('login-page').style.display='flex';document.getElementById('app').classList.remove('on');}
+function showApp(){document.getElementById('login-page').style.display='none';document.getElementById('app').classList.add('on');}
+function nav(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('#sidebar .nav').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  document.getElementById('nav-'+p)?.classList.add('active');
+  if(invTimer){clearInterval(invTimer);invTimer=null;}
+  if(p==='devices')loadDevices();
+  if(p==='audit')loadAudit();
 }
-function duration(from, to) {
-  if (!from || !to) return '—';
-  const s = Math.round((new Date(to) - new Date(from)) / 1000);
-  if (s < 60) return `${s}s`;
-  return `${Math.round(s/60)}m ${s%60}s`;
-}
-function onlineStatus(lastSeen) {
-  if (!lastSeen) return 'offline';
-  const s = (Date.now() - new Date(lastSeen)) / 1000;
-  if (s < 120) return 'online';
-  if (s < 1800) return 'warning';
-  return 'offline';
-}
-
-// ------------------------------------------------------------------ badge
-function badge(status) {
-  const labels = {
-    pending_confirm:'Pending Confirm', queued:'Queued', running:'Running',
-    done:'Done', failed:'Failed', timeout:'Timeout', cancelled:'Cancelled',
-  };
-  return `<span class="badge badge-${status}">${labels[status]||status}</span>`;
+function tab(t){
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
+  document.querySelectorAll('.tabpage').forEach(x=>x.classList.remove('active'));
+  document.getElementById('tab-'+t).classList.add('active');
+  if(t==='files'&&!document.getElementById('fb-body').innerHTML)fbGo(fbPath);
 }
 
-// ------------------------------------------------------------------ nav
-function showLogin() {
-  document.getElementById('login-page').style.display='flex';
-  document.getElementById('app').style.display='none';
+/* ---- login ---- */
+async function doLogin(){
+  const pw=document.getElementById('login-pw').value;
+  try{const r=await api('POST','/api/login',{password:pw});if(r&&r.ok){showApp();nav('devices');}}
+  catch{const e=document.getElementById('login-err');e.style.display='block';setTimeout(()=>e.style.display='none',2500);}
 }
-function showApp() {
-  document.getElementById('login-page').style.display='none';
-  document.getElementById('app').style.display='flex';
-}
-function navigate(page) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-link').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+page).classList.add('active');
-  document.getElementById('nav-'+page)?.classList.add('active');
-  clearInterval(refreshTimer);
-  if (page==='devices') loadDevices();
-  if (page==='queue')   loadQueue(activeFilter);
-  if (page==='audit')   loadAudit();
-}
+async function doLogout(){await api('POST','/api/logout');showLogin();}
 
-// ------------------------------------------------------------------ login
-async function doLogin() {
-  const pw = document.getElementById('login-pw').value;
-  try {
-    const r = await api('POST','/api/login',{password:pw});
-    if (r && r.ok) { showApp(); navigate('devices'); }
-  } catch {
-    const el = document.getElementById('login-err');
-    el.style.display='block';
-    setTimeout(()=>el.style.display='none', 2500);
-  }
+/* ---- devices ---- */
+async function loadDevices(){
+  try{const {devices}=await api('GET','/api/devices')||{devices:[]};allDevices=devices||[];renderDevices();}
+  catch(e){console.error(e);}
 }
-async function doLogout() {
-  await api('POST','/api/logout');
-  showLogin();
-}
-
-// ------------------------------------------------------------------ devices
-async function loadDevices() {
-  try {
-    const {devices} = await api('GET','/api/devices') || {devices:[]};
-    allDevices = devices || [];
-    renderDevices(allDevices);
-  } catch(e) { console.error(e); }
-}
-function filterDevices() {
-  const q = document.getElementById('device-search').value.toLowerCase();
-  renderDevices(allDevices.filter(d=>
-    (d.hostname||'').toLowerCase().includes(q) ||
-    (d.username||'').toLowerCase().includes(q) ||
-    (d.last_ip||'').includes(q)
-  ));
-}
-function renderDevices(devices) {
-  const tb = document.getElementById('devices-tbody');
-  if (!devices.length) {
-    tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">🖥</div>No devices registered yet</div></td></tr>';
-    return;
-  }
-  tb.innerHTML = devices.map(d=>{
-    const st = onlineStatus(d.last_seen);
-    return `<tr style="cursor:pointer" onclick="openDevice('${d.device_id}','${escHtml(d.hostname||d.device_id)}')">
+function renderDevices(){
+  const q=(document.getElementById('dsearch').value||'').toLowerCase();
+  const list=allDevices.filter(d=>(d.hostname||'').toLowerCase().includes(q)||(d.username||'').toLowerCase().includes(q)||(d.last_ip||'').includes(q));
+  const tb=document.getElementById('dtbody');
+  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="i">🖥</div>No devices</div></td></tr>';return;}
+  tb.innerHTML=list.map(d=>{const st=onlineStatus(d.last_seen);
+    return `<tr style="cursor:pointer" onclick="openDevice('${esc(d.device_id)}','${esc(d.hostname||d.device_id)}')">
       <td><span class="dot dot-${st}"></span>${st}</td>
-      <td><strong>${escHtml(d.hostname||d.device_id)}</strong></td>
-      <td>${escHtml(d.username||'—')}</td>
-      <td>${escHtml(d.last_ip||'—')}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(d.os_version||'—')}</td>
-      <td>${relTime(d.last_seen)}</td>
-      <td>${d.pending_count>0?`<span class="badge badge-queued">${d.pending_count}</span>`:'—'}</td>
-    </tr>`;
-  }).join('');
+      <td><strong>${esc(d.hostname||d.device_id)}</strong></td>
+      <td>${esc(d.username||'—')}</td><td>${esc(d.last_ip||'—')}</td>
+      <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.os_version||'—')}</td>
+      <td>${relTime(d.last_seen)}</td></tr>`;}).join('');
 }
 
-// ------------------------------------------------------------------ device detail
-async function openDevice(deviceId, hostname) {
-  currentDevice = deviceId;
-  navigate('device');
-  document.getElementById('nav-devices').classList.add('active');
-  document.getElementById('detail-hostname').textContent = hostname;
-  document.getElementById('detail-hostname-bc').textContent = hostname;
-  await loadDevice(deviceId);
-  // auto-refresh if there are running commands
-  startDeviceAutoRefresh();
+/* ---- device detail ---- */
+async function openDevice(id,host){
+  currentDevice=id;currentHost=host;
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-device').classList.add('active');
+  document.getElementById('d-title').textContent=host;
+  document.getElementById('d-host').textContent=host;
+  document.getElementById('fb-body').innerHTML='';fbPath='C:\\';
+  document.getElementById('sh-out').textContent='';document.getElementById('sh-status').textContent='';
+  tab('inv');
+  const dev=allDevices.find(x=>x.device_id===id)||{};
+  renderInfo(dev,id);
+  loadInventory();
+  if(invTimer)clearInterval(invTimer);
+  invTimer=setInterval(loadInventory,15000); // auto-refresh inventory view
+}
+function renderInfo(dev,id){
+  document.getElementById('d-dot').className='dot dot-'+onlineStatus(dev.last_seen);
+  const f=[['Hostname',dev.hostname||'—'],['User',dev.username||'—'],['Domain',dev.domain||'—'],
+    ['IP',dev.last_ip||'—'],['Agent',dev.agent_version||'—'],['Last Seen',dev.last_seen?relTime(dev.last_seen):'—']];
+  document.getElementById('d-info').innerHTML=f.map(([l,v])=>`<div class="info-item"><div class="l">${l}</div><div class="v">${esc(v)}</div></div>`).join('');
 }
 
-async function loadDevice(deviceId) {
-  if (!deviceId) return;
-  try {
-    const {commands, cmd_labels} = await api('GET',`/api/devices/${deviceId}/commands`) || {};
-    cmdLabels = cmd_labels || {};
-
-    // device info from allDevices cache
-    const dev = allDevices.find(d=>d.device_id===deviceId) || {};
-    renderDeviceInfo(dev, deviceId);
-    renderQuickCmds(deviceId);
-    renderCmdHistory(commands||[], deviceId);
-  } catch(e) { console.error(e); }
+/* ---- inventory ---- */
+async function loadInventory(){
+  if(!currentDevice)return;
+  try{
+    const {inventory}=await api('GET',`/api/devices/${currentDevice}/inventory`)||{inventory:{}};
+    renderInventory(inventory||{});
+  }catch(e){console.error(e);}
 }
-
-function renderDeviceInfo(dev, deviceId) {
-  const st = onlineStatus(dev.last_seen);
-  const dot = document.getElementById('detail-online-dot');
-  dot.className = `dot dot-${st}`;
-
-  const fields = [
-    ['Device ID', deviceId],
-    ['Hostname',  dev.hostname||'—'],
-    ['Username',  dev.username||'—'],
-    ['Domain',    dev.domain||'—'],
-    ['IP Address',dev.last_ip||'—'],
-    ['OS',        dev.os_version||'—'],
-    ['Agent',     dev.agent_version||'—'],
-    ['Last Seen', dev.last_seen ? new Date(dev.last_seen).toLocaleString() : '—'],
-    ['First Seen',dev.first_seen ? new Date(dev.first_seen).toLocaleString() : '—'],
-  ];
-  document.getElementById('detail-info').innerHTML = fields.map(([l,v])=>`
-    <div class="detail-info-item">
-      <div class="label">${l}</div>
-      <div class="value">${escHtml(String(v))}</div>
-    </div>`).join('');
+function invCard(title,icon,updated,inner){
+  return `<div class="inv-card"><div class="h">${icon} ${title}<span class="u">${updated?relTime(updated):'—'}</span></div><div class="b">${inner}</div></div>`;
 }
+function kv(k,v){return `<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;}
+function rawBlock(obj){return `<details class="raw"><summary>raw JSON</summary><pre>${esc(JSON.stringify(obj,null,2))}</pre></details>`;}
+function pick(o,keys){let s='';for(const k of keys){if(o&&o[k.k]!==undefined&&o[k.k]!==null&&o[k.k]!=='')s+=kv(k.l,o[k.k]);}return s;}
 
-function renderQuickCmds(deviceId) {
-  document.getElementById('quick-cmds').innerHTML = COLLECTORS.map(c=>`
-    <button onclick="queueCollector('${deviceId}','${c.type}')">${c.label}</button>
-  `).join('');
-}
-
-function renderCmdHistory(commands, deviceId) {
-  const tb = document.getElementById('cmd-history-tbody');
-  if (!commands.length) {
-    tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:30px">No commands yet. Use Quick Commands above.</td></tr>';
-    return;
+function renderInventory(inv){
+  const order=['sysinfo','netinfo','defender','updates','printers','processes','wifi','eventlog'];
+  const meta={
+    sysinfo:['System','🖥'],netinfo:['Network','🌐'],defender:['Defender','🛡'],updates:['Windows Update','⬆'],
+    printers:['Printers','🖨'],processes:['Processes','⚙'],wifi:['Wi-Fi','📶'],eventlog:['Event Log (24h)','📋']
+  };
+  const wrap=document.getElementById('inv-wrap');
+  const kinds=order.filter(k=>inv[k]);
+  if(!kinds.length){wrap.innerHTML='<div class="empty"><div class="i">📊</div>No inventory yet — click “Collect Now”, or wait for the agent’s next report.</div>';return;}
+  let html='<div class="inv-grid">';
+  for(const k of kinds){
+    const rec=inv[k];const d=rec.data;const[title,icon]=meta[k]||[k,'•'];let inner='';
+    try{
+      if(k==='sysinfo'&&d){inner=pick(d,[{k:'os',l:'OS'},{k:'cpu',l:'CPU'},{k:'ram_total_gb',l:'RAM (GB)'},{k:'ram_free_gb',l:'RAM free (GB)'},{k:'uptime_hours',l:'Uptime (h)'},{k:'last_boot',l:'Last boot'},{k:'bios_serial',l:'Serial'},{k:'timezone',l:'Timezone'}]);
+        if(d.disks&&d.disks.length){inner+='<div class="kv"><span class="k">Disks</span><span class="v">'+d.disks.map(x=>`${x.drive}: ${x.free_gb}/${x.total_gb} GB free`).join('<br>')+'</span></div>';}
+        inner+=rawBlock(d);}
+      else if(k==='netinfo'&&d){inner=kv('Gateway',d.default_gateway||'—');
+        if(d.dns_servers)inner+=kv('DNS',[].concat(d.dns_servers).join(', '));
+        if(d.adapters&&d.adapters.length)inner+='<div class="kv"><span class="k">Adapters</span><span class="v">'+d.adapters.map(a=>`${esc(a.name)}: ${esc(a.ip||'—')}`).join('<br>')+'</span></div>';
+        inner+=rawBlock(d);}
+      else if(k==='defender'&&d){inner=pick(d,[{k:'realtime_enabled',l:'Realtime'},{k:'am_enabled',l:'AM service'},{k:'av_signature_version',l:'Sig version'},{k:'av_signature_age_days',l:'Sig age (d)'},{k:'last_quick_scan',l:'Last quick scan'},{k:'engine_version',l:'Engine'}]);
+        const th=(d.threats_detected||[]);inner+=kv('Threats',th.length?th.length+' detected':'none');inner+=rawBlock(d);}
+      else if(k==='updates'&&d){inner=kv('Pending updates',(d.pending_count!=null?d.pending_count:'—'));
+        if(d.pending_updates&&d.pending_updates.length)inner+='<div class="kv"><span class="k">Pending</span><span class="v">'+d.pending_updates.slice(0,5).map(esc).join('<br>')+'</span></div>';
+        inner+=rawBlock(d);}
+      else if(k==='printers'&&d){inner=kv('Count',d.count!=null?d.count:'—');
+        if(d.printers&&d.printers.length)inner+='<div class="kv"><span class="k">Printers</span><span class="v">'+d.printers.map(p=>esc(p.name)).join('<br>')+'</span></div>';
+        inner+=rawBlock(d);}
+      else if(k==='processes'&&d){inner=kv('Total',d.count!=null?d.count:'—');
+        if(d.top30_by_cpu&&d.top30_by_cpu.length){inner+='<table class="mini-table">'+d.top30_by_cpu.slice(0,8).map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.mem_mb)} MB</td></tr>`).join('')+'</table>';}
+        inner+=rawBlock(d);}
+      else if(k==='eventlog'&&d){inner=kv('Errors/Warnings (24h)',d.count!=null?d.count:'—');
+        if(d.events&&d.events.length){inner+='<table class="mini-table">'+d.events.slice(0,6).map(e=>`<tr><td>${esc(e.level)}</td><td>${esc(e.source)}</td></tr>`).join('')+'</table>';}
+        inner+=rawBlock(d);}
+      else if(k==='wifi'){inner='<div class="kv"><span class="v" style="color:var(--muted)">netsh output</span></div>'+`<details class="raw"><summary>show output</summary><pre>${esc(typeof d==='string'?d:JSON.stringify(d,null,2))}</pre></details>`;}
+      else{inner=rawBlock(d);}
+    }catch(e){inner=rawBlock(d);}
+    html+=invCard(title,icon,rec.updated_at,inner);
   }
-  tb.innerHTML = commands.map(c=>{
-    const label = cmdLabels[c.cmd_type] || c.cmd_type;
-    const isShell = c.cmd_type==='shell';
-    const dur = duration(c.picked_at, c.completed_at);
-    let actions = '';
-    if (c.status==='pending_confirm')
-      actions=`<button class="btn-primary btn-sm" onclick="event.stopPropagation();showDirectConfirm(${c.id},'${c.cmd_type}',${JSON.stringify(escHtml(c.payload||'{}'))})">✓ Confirm</button>
-               <button class="btn-ghost btn-sm" style="margin-left:4px" onclick="event.stopPropagation();doCancelCmd(${c.id})">✗</button>`;
-    else if (c.cmd_type==='getfile' && c.status==='done')
-      actions=`<button class="btn-primary btn-sm" onclick="event.stopPropagation();downloadFile(${c.id})">⬇ Download</button>
-               <button class="btn-ghost btn-sm" style="margin-left:4px" onclick="event.stopPropagation();viewResult(${c.id})">ℹ Info</button>`;
-    else if (['done','failed','timeout'].includes(c.status))
-      actions=`<button class="btn-ghost btn-sm" onclick="event.stopPropagation();viewResult(${c.id})">📄 Result</button>`;
-    return `<tr>
-      <td style="color:var(--muted);font-family:var(--mono);font-size:11px">#${c.id}</td>
-      <td><span class="tag ${isShell?'cmd-type-shell':''}">${label}</span></td>
-      <td>${badge(c.status)}</td>
-      <td style="color:var(--muted);font-size:12px">${relTime(c.created_at)}</td>
-      <td style="color:var(--muted);font-size:12px">${c.status==='running'?'<span class="spinner"></span>':dur}</td>
-      <td>${actions}</td>
-    </tr>`;
-  }).join('');
+  html+='</div>';
+  wrap.innerHTML=html;
 }
 
-function startDeviceAutoRefresh() {
-  clearInterval(refreshTimer);
-  refreshTimer = setInterval(async()=>{
-    if (currentDevice) {
-      const {commands} = await api('GET',`/api/devices/${currentDevice}/commands`) || {};
-      if (commands) renderCmdHistory(commands, currentDevice);
-      const hasActive = (commands||[]).some(c=>['queued','running','pending_confirm'].includes(c.status));
-      if (!hasActive) clearInterval(refreshTimer);
-    }
-  }, 5000);
-}
-
-// ------------------------------------------------------------------ shell
-async function queueShell() {
-  const script = document.getElementById('shell-input').value.trim();
-  if (!script) { alert('Enter a PowerShell command first.'); return; }
-  if (!currentDevice) return;
-  try {
-    const {id} = await api('POST','/api/commands',{
-      device_id: currentDevice, cmd_type:'shell', payload:{script}
-    });
-    showConfirmModal(id, 'shell', {script});
-  } catch(e) { alert('Error: '+e.message); }
-}
-
-// ------------------------------------------------------------------ file ops
-async function queueFileOp(cmdType) {
-  if (!currentDevice) return;
-  const path = document.getElementById('file-path-input').value.trim();
-  if (!path) { alert('Enter a path first.'); return; }
-  try {
-    const {id} = await api('POST','/api/commands',{
-      device_id: currentDevice, cmd_type: cmdType, payload:{path}
-    });
-    showConfirmModal(id, cmdType, {path});
-  } catch(e) { alert('Error: '+e.message); }
-}
-
-// ------------------------------------------------------------------ queue collector
-async function queueCollector(deviceId, cmdType) {
-  let payload = {};
-  if (cmdType==='ping') {
-    const target = prompt('Ping target (hostname or IP):');
-    if (!target) return;
-    payload = {target};
+/* ---- live command runner (auto-queued, long-poll makes it fast) ---- */
+async function runLive(type,payload,onStatus){
+  const {id}=await api('POST','/api/commands',{device_id:currentDevice,cmd_type:type,payload:payload||{},confirm:true});
+  for(let i=0;i<120;i++){
+    await new Promise(r=>setTimeout(r,1000));
+    const res=await api('GET',`/api/commands/${id}/result`);
+    if(!res)throw new Error('auth');
+    if(onStatus)onStatus(res.status);
+    if(['done','failed','timeout'].includes(res.status))return {id,...res};
   }
-  try {
-    const {id} = await api('POST','/api/commands',{device_id:deviceId,cmd_type:cmdType,payload});
-    showConfirmModal(id, cmdType, payload);
-  } catch(e) { alert('Error: '+e.message); }
+  return {id,status:'timeout',result:'client gave up waiting'};
 }
 
-// ------------------------------------------------------------------ confirm modal
-function showConfirmModal(cmdId, cmdType, payload) {
-  pendingConfirmId = cmdId;
-  const isShell = cmdType==='shell';
-  const label = cmdLabels[cmdType] || cmdType;
-  const dev = allDevices.find(d=>d.device_id===currentDevice);
-  const hostname = dev?.hostname || currentDevice || 'this device';
-
-  document.getElementById('confirm-title').textContent =
-    isShell ? '⚠️ Confirm Shell Execution' : `Confirm: ${label}`;
-
-  let body = '';
-  if (isShell) {
-    body += `<div class="shell-warning">⚠️ <strong>Warning:</strong> This will execute arbitrary PowerShell on <strong>${escHtml(hostname)}</strong> as SYSTEM. Review the script carefully.</div>`;
-    body += `<div class="confirm-details">Script:<br><pre class="shell-preview">${escHtml(payload.script||'')}</pre></div>`;
-    document.getElementById('confirm-btn').className='btn-danger';
-    document.getElementById('confirm-btn').textContent='⚠️ Execute on '+escHtml(hostname);
-  } else if (cmdType==='getfile') {
-    body += `<div class="shell-warning">⬇️ <strong>File download:</strong> pulls a file off <strong>${escHtml(hostname)}</strong>. Only paths inside the agent's allowlist will return content; anything else is refused by the agent. This download is audit-logged.</div>`;
-    body += `<div class="confirm-details">Path: <strong>${escHtml(payload.path||'')}</strong></div>`;
-    document.getElementById('confirm-btn').className='btn-primary';
-    document.getElementById('confirm-btn').textContent='⬇ Confirm Download';
-  } else if (cmdType==='listdir' || cmdType==='readfile') {
-    body = `<div class="confirm-details">Run <strong>${label}</strong> on <strong>${escHtml(hostname)}</strong>?</div>`;
-    body += `<div class="confirm-details">Path: <strong>${escHtml(payload.path||'')}</strong></div>`;
-    document.getElementById('confirm-btn').className='btn-primary';
-    document.getElementById('confirm-btn').textContent='✓ Confirm Execute';
-  } else {
-    body = `<div class="confirm-details">Run <strong>${label}</strong> on <strong>${escHtml(hostname)}</strong>?</div>`;
-    if (payload.target) body += `<div class="confirm-details">Target: <strong>${escHtml(payload.target)}</strong></div>`;
-    document.getElementById('confirm-btn').className='btn-primary';
-    document.getElementById('confirm-btn').textContent='✓ Confirm Execute';
-  }
-  document.getElementById('confirm-body').innerHTML = body;
-
-  document.getElementById('modal-result').style.display='none';
-  document.getElementById('modal-confirm').style.display='block';
-  document.getElementById('modal-overlay').classList.add('open');
+async function refreshInventory(){
+  const btn=event?.target;if(btn){btn.disabled=true;btn.textContent='⟳ Collecting…';}
+  try{
+    // queue all read collectors; agent will also push them to inventory store
+    const kinds=['sysinfo','netinfo','defender','updates','printers','processes','wifi','eventlog'];
+    await Promise.all(kinds.map(k=>api('POST','/api/commands',{device_id:currentDevice,cmd_type:k,payload:{},confirm:true})));
+    // give the agent a couple long-poll cycles, then reload
+    setTimeout(loadInventory,4000);setTimeout(loadInventory,9000);
+  }catch(e){alert('Error: '+e.message);}
+  finally{if(btn){setTimeout(()=>{btn.disabled=false;btn.textContent='⟳ Collect Now';},4000);}}
 }
 
-async function showDirectConfirm(cmdId, cmdType, payloadStr) {
-  let payload = {};
-  try { payload = JSON.parse(payloadStr); } catch {}
-  pendingConfirmId = cmdId;
-  showConfirmModal(cmdId, cmdType, payload);
+/* ---- file browser ---- */
+function normPath(p){p=(p||'').trim();if(!p)p='C:\\';return p;}
+function fbUp(){
+  let p=fbPath.replace(/[\\/]+$/,'');
+  const i=Math.max(p.lastIndexOf('\\'),p.lastIndexOf('/'));
+  if(i>2)p=p.slice(0,i);else if(i===2)p=p.slice(0,3);
+  fbGo(p);
 }
-
-async function doConfirm() {
-  if (!pendingConfirmId) return;
-  try {
-    await api('POST',`/api/commands/${pendingConfirmId}/confirm`);
-    closeModal();
-    if (currentDevice) { loadDevice(currentDevice); startDeviceAutoRefresh(); }
-    if (document.getElementById('page-queue').classList.contains('active')) loadQueue(activeFilter);
-  } catch(e) { alert('Error: '+e.message); }
+function fbCrumb(){
+  const parts=fbPath.replace(/[\\/]+$/,'').split('\\');let acc='';
+  document.getElementById('fb-crumb').innerHTML=parts.map((seg,i)=>{
+    acc+=(i?'\\':'')+seg;const target=acc+(i===0?'\\':'');
+    return `<a onclick="fbGo('${esc(target.replace(/\\/g,'\\\\'))}')">${esc(seg||'\\')}</a>`;
+  }).join('<span>\\</span>');
 }
-
-async function doCancelCmd(cmdId) {
-  if (!confirm('Cancel this command?')) return;
-  try {
-    await api('POST',`/api/commands/${cmdId}/cancel`);
-    if (currentDevice) loadDevice(currentDevice);
-    if (document.getElementById('page-queue').classList.contains('active')) loadQueue(activeFilter);
-  } catch(e) { alert('Error: '+e.message); }
-}
-
-// ------------------------------------------------------------------ result modal
-async function viewResult(cmdId) {
-  try {
-    const {cmd_type,status,completed_at,result,exit_code} = await api('GET',`/api/commands/${cmdId}/result`) || {};
-    const label = cmdLabels[cmd_type] || cmd_type;
-    document.getElementById('result-title').textContent = `Result — ${label} #${cmdId}`;
-    document.getElementById('result-meta').textContent =
-      `Status: ${status} | Exit code: ${exit_code ?? '—'} | Completed: ${completed_at ? new Date(completed_at).toLocaleString() : '—'}`;
-
-    let text = result || '(no output)';
-    try {
-      const parsed = JSON.parse(text);
-      // Don't dump the whole base64 blob into the info view
-      if (cmd_type==='getfile' && parsed.b64) {
-        parsed.b64 = `[${parsed.size||0} bytes -- use the Download button]`;
+async function fbGo(path){
+  fbPath=normPath(path);
+  document.getElementById('fb-path').value=fbPath;
+  fbCrumb();
+  const body=document.getElementById('fb-body');
+  const st=document.getElementById('fb-status');
+  body.innerHTML='';st.innerHTML='<span class="spinner"></span> Listing…';
+  try{
+    const r=await runLive('listdir',{path:fbPath});
+    st.textContent='';
+    let data={};try{data=JSON.parse(r.result||'{}');}catch{data={error:r.result};}
+    if(data.error){st.innerHTML=`<span style="color:var(--red)">${esc(data.error)}</span>`;return;}
+    const items=(data.items||[]).sort((a,b)=>(a.type===b.type)?a.name.localeCompare(b.name):(a.type==='dir'?-1:1));
+    if(!items.length){body.innerHTML='<tr><td class="empty" style="padding:24px">(empty folder)</td></tr>';return;}
+    body.innerHTML=items.map(it=>{
+      const full=(fbPath.replace(/[\\/]+$/,''))+'\\'+it.name;
+      const fe=esc(full.replace(/\\/g,'\\\\'));
+      if(it.type==='dir'){
+        return `<tr class="fb-row-dir" onclick="fbGo('${fe}')"><td class="fb-name">📁 ${esc(it.name)}</td><td style="color:var(--muted)">—</td><td style="color:var(--muted)">${esc(it.modified)}</td><td class="fb-actions"></td></tr>`;
       }
-      text = JSON.stringify(parsed,null,2);
-    } catch {}
-    document.getElementById('result-content').textContent = text;
+      const sz=it.size!=null?fmtSize(it.size):'';
+      return `<tr><td class="fb-name">📄 ${esc(it.name)}</td><td style="color:var(--muted)">${sz}</td><td style="color:var(--muted)">${esc(it.modified)}</td>
+        <td class="fb-actions">
+          <button class="btn-ghost btn-sm" onclick="fbRead('${fe}')">Read</button>
+          <button class="btn-ghost btn-sm" onclick="fbDownload('${fe}')">⬇</button>
+        </td></tr>`;
+    }).join('');
+  }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
+}
+function fmtSize(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(1)+' MB';}
 
-    document.getElementById('modal-confirm').style.display='none';
-    document.getElementById('modal-result').style.display='block';
-    document.getElementById('modal-overlay').classList.add('open');
-  } catch(e) { alert('Error: '+e.message); }
+async function fbRead(path){
+  const st=document.getElementById('fb-status');
+  st.innerHTML='<span class="spinner"></span> Reading…';
+  try{
+    const r=await runLive('readfile',{path});
+    st.textContent='';
+    let data={};try{data=JSON.parse(r.result||'{}');}catch{data={content:r.result};}
+    if(data.error){showModal('Read error',`<pre class="sh-out">${esc(data.error)}</pre>`);return;}
+    showModal('📄 '+path.split('\\').pop(),`<pre class="sh-out" style="max-height:70vh">${esc(data.content||'(empty)')}</pre>`);
+  }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
+}
+async function fbDownload(path){
+  const st=document.getElementById('fb-status');
+  st.innerHTML='<span class="spinner"></span> Requesting file…';
+  try{
+    const r=await runLive('getfile',{path});
+    st.textContent='';
+    let data={};try{data=JSON.parse(r.result||'{}');}catch{data={error:r.result};}
+    if(data.error){showModal('Download refused',`<pre class="sh-out">${esc(data.error)}</pre>`);return;}
+    // file present -> trigger browser download of the stored result
+    const a=document.createElement('a');a.href=`/api/commands/${r.id}/download`;a.download='';
+    document.body.appendChild(a);a.click();a.remove();
+    st.innerHTML=`<span style="color:var(--green)">Downloaded ${esc(path.split('\\').pop())} (${fmtSize(data.size||0)})</span>`;
+  }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
 }
 
-function copyResult() {
-  const text = document.getElementById('result-content').textContent;
-  navigator.clipboard.writeText(text).catch(()=>{});
+/* ---- shell ---- */
+async function shellRun(){
+  const script=document.getElementById('sh-input').value.trim();
+  if(!script)return;
+  const btn=document.getElementById('sh-run');btn.disabled=true;
+  const st=document.getElementById('sh-status');const out=document.getElementById('sh-out');
+  st.innerHTML='<span class="spinner"></span> Running on '+esc(currentHost)+'…';
+  try{
+    const r=await runLive('shell',{script},s=>{st.innerHTML='<span class="spinner"></span> '+esc(s)+'…';});
+    st.textContent='Status: '+r.status+(r.exit_code!=null?(' · exit '+r.exit_code):'');
+    out.textContent=r.result||'(no output)';
+  }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
+  finally{btn.disabled=false;}
 }
 
-// Trigger a browser download of a completed getfile result. The session cookie
-// rides along automatically, and the server audit-logs the download.
-function downloadFile(cmdId) {
-  const a = document.createElement('a');
-  a.href = `/api/commands/${cmdId}/download`;
-  a.download = '';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
+/* ---- audit ---- */
+async function loadAudit(){
+  try{const {entries}=await api('GET','/api/audit')||{entries:[]};
+    const el=document.getElementById('audit-list');
+    if(!entries.length){el.innerHTML='<div class="empty">No audit entries</div>';return;}
+    el.innerHTML=entries.map(e=>`<div class="audit"><div class="ts">${new Date(e.ts).toLocaleString()}</div>
+      <div class="ac">${esc(e.action)}</div><div class="de">${esc(JSON.stringify(e.detail))}</div></div>`).join('');
+  }catch(e){console.error(e);}
 }
 
-// ------------------------------------------------------------------ queue page
-async function loadQueue(filter) {
-  activeFilter = filter;
-  document.querySelectorAll('.filter-tab').forEach(t=>{
-    t.classList.toggle('active', t.dataset.f===filter);
-  });
-  try {
-    const statuses = filter ? filter.split(',') : [];
-    // fetch for each status if multiple
-    let allCmds = [];
-    if (statuses.length > 1) {
-      for (const s of statuses) {
-        const r = await api('GET',`/api/commands?status=${s}&limit=100`) || {};
-        allCmds = allCmds.concat(r.commands||[]);
-        if (r.cmd_labels) cmdLabels = {...cmdLabels, ...r.cmd_labels};
-      }
-      allCmds.sort((a,b)=>b.id-a.id);
-    } else {
-      const url = filter ? `/api/commands?status=${filter}&limit=200` : '/api/commands?limit=200';
-      const r = await api('GET', url) || {};
-      allCmds = r.commands || [];
-      if (r.cmd_labels) cmdLabels = {...cmdLabels, ...r.cmd_labels};
-    }
-    renderQueue(allCmds);
-  } catch(e) { console.error(e); }
+/* ---- modal ---- */
+function showModal(title,html){
+  let m=document.getElementById('modal');
+  if(!m){m=document.createElement('div');m.id='modal';
+    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center';
+    m.onclick=e=>{if(e.target===m)m.remove();};document.body.appendChild(m);}
+  m.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:680px;max-width:94vw;max-height:88vh;overflow:auto">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="font-size:15px">${esc(title)}</h2>
+      <button class="btn-ghost btn-sm" onclick="document.getElementById('modal').remove()">Close</button></div>${html}</div>`;
 }
 
-function renderQueue(commands) {
-  const tb = document.getElementById('queue-tbody');
-  if (!commands.length) {
-    tb.innerHTML='<tr><td colspan="7"><div class="empty-state"><div class="icon">📋</div>No commands</div></td></tr>';
-    return;
-  }
-  tb.innerHTML = commands.map(c=>{
-    const label = cmdLabels[c.cmd_type]||c.cmd_type;
-    let actions = '';
-    if (c.status==='pending_confirm') {
-      let payload = {};
-      try { payload=JSON.parse(c.payload||'{}'); } catch {}
-      actions=`<button class="btn-primary btn-sm"
-        onclick="currentDevice='${c.device_id}';showConfirmModal(${c.id},'${c.cmd_type}',${JSON.stringify(payload)})">✓ Confirm</button>
-        <button class="btn-ghost btn-sm" style="margin-left:4px" onclick="doCancelCmd(${c.id})">✗ Cancel</button>`;
-    } else if (c.cmd_type==='getfile' && c.status==='done') {
-      actions=`<button class="btn-primary btn-sm" onclick="downloadFile(${c.id})">⬇ Download</button>`;
-    } else if (['done','failed','timeout'].includes(c.status)) {
-      actions=`<button class="btn-ghost btn-sm" onclick="viewResult(${c.id})">📄 Result</button>`;
-    }
-    return `<tr>
-      <td style="color:var(--muted);font-family:var(--mono);font-size:11px">#${c.id}</td>
-      <td><a onclick="openDevice('${c.device_id}','${escHtml(c.hostname||c.device_id)}')">${escHtml(c.hostname||c.device_id)}</a></td>
-      <td><span class="tag">${label}</span></td>
-      <td>${badge(c.status)}</td>
-      <td style="color:var(--muted);font-size:12px">${relTime(c.created_at)}</td>
-      <td style="color:var(--muted);font-size:12px">${relTime(c.completed_at)}</td>
-      <td>${actions}</td>
-    </tr>`;
-  }).join('');
-}
-
-// ------------------------------------------------------------------ audit page
-async function loadAudit() {
-  try {
-    const {entries} = await api('GET','/api/audit') || {entries:[]};
-    const el = document.getElementById('audit-list');
-    if (!entries.length) {
-      el.innerHTML='<div class="empty-state"><div class="icon">📋</div>No audit entries</div>';
-      return;
-    }
-    el.innerHTML = entries.map(e=>`
-      <div class="audit-entry">
-        <div class="audit-ts">${new Date(e.ts).toLocaleString()}</div>
-        <div class="audit-action">${escHtml(e.action)}</div>
-        <div class="audit-detail">${escHtml(JSON.stringify(e.detail))}</div>
-      </div>`).join('');
-  } catch(e) { console.error(e); }
-}
-
-// ------------------------------------------------------------------ modal helpers
-function closeModal() {
-  document.getElementById('modal-overlay').classList.remove('open');
-  document.getElementById('modal-confirm').style.display='none';
-  document.getElementById('modal-result').style.display='none';
-  pendingConfirmId = null;
-}
-function overlayClick(e) {
-  if (e.target===document.getElementById('modal-overlay')) closeModal();
-}
-
-// ------------------------------------------------------------------ utils
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ------------------------------------------------------------------ init
-(async ()=>{
-  const {authed, open_mode} = await api('GET','/api/whoami') || {};
-  if (authed || open_mode) { showApp(); navigate('devices'); }
-  else showLogin();
-  document.getElementById('login-pw').addEventListener('keydown',e=>{
-    if(e.key==='Enter') doLogin();
-  });
+/* ---- init ---- */
+(async()=>{
+  const w=await api('GET','/api/whoami')||{};
+  if(w.authed||w.open_mode){showApp();nav('devices');}else showLogin();
+  document.getElementById('login-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 })();
 </script>
 </body>
