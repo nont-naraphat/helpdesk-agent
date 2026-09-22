@@ -190,6 +190,19 @@ textarea{font-family:var(--mono);resize:vertical}
 .sec-status{font-size:11px;color:var(--muted);padding:4px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
 .info-note{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:11px;color:var(--muted);margin-top:8px}
 </style>
+<script id="ctrl-scripts-data" type="application/json">
+{
+  "restart": "Restart-Computer -Force",
+  "shutdown": "Stop-Computer -Force",
+  "lock": "$u=(Get-WmiObject Win32_ComputerSystem).UserName;if($u){$n=\"BHLock_$(Get-Random)\";Register-ScheduledTask -TaskName $n -Action(New-ScheduledTaskAction -Execute \"rundll32.exe\" -Argument \"user32.dll,LockWorkStation\") -Trigger(New-ScheduledTaskTrigger -Once -At((Get-Date).AddSeconds(2))) -Principal(New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive) -Force|Out-Null;Start-Sleep 3;Unregister-ScheduledTask -TaskName $n -Confirm:$false -EA 0;Write-Host \"Locked: $u\"}else{Write-Host \"No active user\"}",
+  "sleep": "$u=(Get-WmiObject Win32_ComputerSystem).UserName;if($u){$n=\"BHSleep_$(Get-Random)\";Register-ScheduledTask -TaskName $n -Action(New-ScheduledTaskAction -Execute \"rundll32.exe\" -Argument \"powrprof.dll,SetSuspendState 0,1,0\") -Trigger(New-ScheduledTaskTrigger -Once -At((Get-Date).AddSeconds(2))) -Principal(New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive) -Force|Out-Null;Start-Sleep 3;Unregister-ScheduledTask -TaskName $n -Confirm:$false -EA 0;Write-Host \"Sleep sent\"}else{Write-Host \"No active user\"}",
+  "logoff": "try{$lines=(query session 2>&1);$active=$lines|Where-Object{$_ -match \"Active\"}|Select-Object -First 1;if($active){$id=($active -replace \"^.*?([0-9]+)\\s+Active.*\",\"$1\").Trim();logoff $id;Write-Host \"Logged off session $id\"}else{Write-Host \"No active session\"}}catch{Write-Host \"Error: $_\"}",
+  "cleartemp": "Remove-Item \"$env:TEMP\\*\" -Recurse -Force -EA 0;Remove-Item \"C:\\Windows\\Temp\\*\" -Recurse -Force -EA 0;Write-Host \"Temp cleared\"",
+  "flushdns": "ipconfig /flushdns",
+  "gpupdate": "gpupdate /force",
+  "diskhealth": "Get-PhysicalDisk|Select-Object FriendlyName,MediaType,HealthStatus,OperationalStatus,@{N=\"GB\";E={[math]::Round($_.Size/1GB,1)}}|ConvertTo-Json -Depth 2"
+}
+</script>
 </head>
 <body>
 
@@ -244,28 +257,28 @@ textarea{font-family:var(--mono);resize:vertical}
         <div class="sec-h open" onclick="toggleSec('ctrl')"><span>⚡</span><span class="title">System Control</span><span class="chev">▾</span></div>
         <div id="sec-ctrl-b" class="sec-b">
           <div class="ctrl-grid">
-            <button class="ctrl-btn warn" onclick="ctrlAction('restart','Restart Computer','This will restart DEVICE. Agent will be offline for ~1-2 minutes.','Restart-Computer -Force')">
+            <button class="ctrl-btn warn" onclick="ctrlAction('restart','Restart Computer','This will restart DEVICE. Agent offline ~2 min.',CTRL_SCRIPTS.restart)" >
               <span class="ci">🔄</span>Restart
             </button>
-            <button class="ctrl-btn danger" onclick="ctrlAction('shutdown','Shutdown Computer','This will shut down DEVICE completely.','Stop-Computer -Force')">
+            <button class="ctrl-btn danger" onclick="ctrlAction('shutdown','Shutdown Computer','This will shut down DEVICE completely.',CTRL_SCRIPTS.shutdown)" >
               <span class="ci">⏹</span>Shutdown
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('lock','Lock Screen','Lock the screen on DEVICE.','$u=(Get-WmiObject Win32_ComputerSystem).UserName;if($u){$n='BHLock_'+(Get-Random);Register-ScheduledTask -TaskName $n -Action(New-ScheduledTaskAction -Execute 'rundll32.exe' -Argument 'user32.dll,LockWorkStation') -Trigger(New-ScheduledTaskTrigger -Once -At((Get-Date).AddSeconds(2))) -Principal(New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive) -Force|Out-Null;Start-Sleep 3;Unregister-ScheduledTask -TaskName $n -Confirm:$false -EA 0;Write-Host "Screen locked for: $u"}else{Write-Host "No active user logged in"}')">
+            <button class="ctrl-btn ok" onclick="ctrlAction('lock','Lock','...',CTRL_SCRIPTS.lock)"Screen locked for: $u"}else{Write-Host "No active user logged in"}')">
               <span class="ci">🔒</span>Lock Screen
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('sleep','Sleep','Put DEVICE to sleep.','$u=(Get-WmiObject Win32_ComputerSystem).UserName;if($u){$n='BHSleep_'+(Get-Random);Register-ScheduledTask -TaskName $n -Action(New-ScheduledTaskAction -Execute 'rundll32.exe' -Argument 'powrprof.dll,SetSuspendState 0,1,0') -Trigger(New-ScheduledTaskTrigger -Once -At((Get-Date).AddSeconds(2))) -Principal(New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive) -Force|Out-Null;Start-Sleep 3;Unregister-ScheduledTask -TaskName $n -Confirm:$false -EA 0;Write-Host "Sleep sent"}else{Write-Host "No active user"}')">
+            <button class="ctrl-btn ok" onclick="ctrlAction('sleep','Sleep','...',CTRL_SCRIPTS.sleep)"Sleep sent"}else{Write-Host "No active user"}')">
               <span class="ci">💤</span>Sleep
             </button>
             <button class="ctrl-btn ok" onclick="ctrlAction('try{$lines=(query session 2>&1);$active=$lines|Where-Object{$_ -match 'Active'}|Select-Object -First 1;if($active){$id=($active -replace '^[^0-9]*(\d+)\s+Active.*','$1').Trim();logoff $id;Write-Host "Logged off session: $id"}else{Write-Host "No active session found"}}catch{Write-Host "Error: $_"}','Log Off User','Log off the current user on DEVICE.','try{$lines=(query session 2>&1);$active=$lines|Where-Object{$_ -match 'Active'}|Select-Object -First 1;if($active){$id=($active -replace '^[^0-9]*(\d+)\s+Active.*','$1').Trim();logoff $id;Write-Host "Logged off session: $id"}else{Write-Host "No active session found"}}catch{Write-Host "Error: $_"}')">
               <span class="ci">↩</span>Log Off
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('clear-temp','Clear Temp Files','Clear temp files on DEVICE to free disk space.','$before=[math]::Round((Get-ChildItem $env:TEMP -Recurse -EA 0|Measure-Object Length -Sum).Sum/1MB,1);Remove-Item -Path "$env:TEMP\*" -Recurse -Force -EA SilentlyContinue;Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -EA SilentlyContinue;Remove-Item -Path "C:\Windows\Prefetch\*" -Force -EA SilentlyContinue;Write-Host "Temp cleared. Was: $($before)MB freed')" >
+            <button class="ctrl-btn ok" onclick="ctrlAction('clear-temp','Clear Temp Files','Clear temp files on DEVICE.',CTRL_SCRIPTS.cleartemp)"$env:TEMP\*" -Recurse -Force -EA SilentlyContinue;Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -EA SilentlyContinue;Remove-Item -Path "C:\Windows\Prefetch\*" -Force -EA SilentlyContinue;Write-Host "Temp cleared. Was: $($before)MB freed')" >
               <span class="ci">🧹</span>Clear Temp
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('flush-dns','Flush DNS','Clear DNS cache on DEVICE.','ipconfig /flushdns')">
+            <button class="ctrl-btn ok" onclick="ctrlAction('flush-dns','Flush DNS','Clear DNS cache on DEVICE.',CTRL_SCRIPTS.flushdns)" >
               <span class="ci">🌐</span>Flush DNS
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('gpupdate','Group Policy Update','Run gpupdate on DEVICE.','gpupdate /force')">
+            <button class="ctrl-btn ok" onclick="ctrlAction('gpupdate','GP Update','Run gpupdate /force on DEVICE.',CTRL_SCRIPTS.gpupdate)" >
               <span class="ci">📜</span>GP Update
             </button>
           </div>
@@ -291,7 +304,7 @@ textarea{font-family:var(--mono);resize:vertical}
             <button class="qc-btn" id="qcb-software"  onclick="collectShellData('software','📦 Software','Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*,HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*|Where-Object{$_.DisplayName}|Select-Object DisplayName,DisplayVersion,Publisher|Sort-Object DisplayName|ConvertTo-Json -Depth 2')">📦 Software</button>
             <button class="qc-btn" id="qcb-startup"   onclick="collectShellData('startup','🚀 Startup','Get-CimInstance Win32_StartupCommand|Select-Object Name,Command,Location,User|ConvertTo-Json -Depth 2')">🚀 Startup</button>
             <button class="qc-btn" id="qcb-users"     onclick="collectShellData('users','👤 Users','Get-LocalUser|Select-Object Name,Enabled,LastLogon,Description|ConvertTo-Json -Depth 2')">👤 Local Users</button>
-            <button class="qc-btn" id="qcb-diskhealth" onclick="collectShellData('diskhealth','💿 Disk Health','Get-PhysicalDisk|Select-Object FriendlyName,MediaType,HealthStatus,OperationalStatus,Size,@{N=\"Size_GB\";E={[math]::Round($_.Size/1GB,1)}}|ConvertTo-Json -Depth 2')">💿 Disk Health</button>
+            <button class="qc-btn" id="qcb-diskhealth" onclick="collectShellData('diskhealth','Disk Health',CTRL_SCRIPTS.diskhealth)" Size_GB\";E={[math]::Round($_.Size/1GB,1)}}|ConvertTo-Json -Depth 2')">💿 Disk Health</button>
             <button class="qc-btn" id="qcb-ping"      onclick="pingTarget()">📡 Ping…</button>
             <button class="qc-btn" id="qcb-all"       onclick="collectAll()">⚡ Collect All</button>
           </div>
@@ -451,7 +464,13 @@ textarea{font-family:var(--mono);resize:vertical}
 </div>
 
 <script>
+
+
 "use strict";
+
+// Load ctrl scripts from embedded JSON (avoids all JS string escaping issues)
+const CTRL_SCRIPTS = JSON.parse(document.getElementById('ctrl-scripts-data').textContent);
+
 const G={
   devices:[],devId:null,devInfo:{},
   inv:{},services:null,software:null,startup:null,users:null,
