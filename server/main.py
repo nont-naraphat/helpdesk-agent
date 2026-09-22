@@ -586,6 +586,126 @@ async def download_file(request: Request, cmd_id: int):
     )
 
 
+
+# ─── SYSTEM CONTROL ───────────────────────────────────────────────────────────
+# Scripts live here (server-side) not in the HTML — no JS escaping issues.
+CTRL_SCRIPTS: dict[str, str] = {
+    "restart":   "Restart-Computer -Force",
+    "shutdown":  "Stop-Computer -Force",
+    "lock":      (
+        "$u=(Get-WmiObject Win32_ComputerSystem).UserName;"
+        "if($u){"
+        "$n=\"BHLock_$(Get-Random)\";"
+        "Register-ScheduledTask -TaskName $n"
+        " -Action(New-ScheduledTaskAction -Execute \"rundll32.exe\" -Argument \"user32.dll,LockWorkStation\")"
+        " -Trigger(New-ScheduledTaskTrigger -Once -At((Get-Date).AddSeconds(2)))"
+        " -Principal(New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive)"
+        " -Force|Out-Null;"
+        "Start-Sleep 3;"
+        "Unregister-ScheduledTask -TaskName $n -Confirm:$false -EA 0;"
+        "Write-Host \"Screen locked for: $u\"}"
+        "else{Write-Host \"No active user\"}"
+    ),
+    "sleep":     (
+        "$u=(Get-WmiObject Win32_ComputerSystem).UserName;"
+        "if($u){"
+        "$n=\"BHSleep_$(Get-Random)\";"
+        "Register-ScheduledTask -TaskName $n"
+        " -Action(New-ScheduledTaskAction -Execute \"rundll32.exe\" -Argument \"powrprof.dll,SetSuspendState 0,1,0\")"
+        " -Trigger(New-ScheduledTaskTrigger -Once -At((Get-Date).AddSeconds(2)))"
+        " -Principal(New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive)"
+        " -Force|Out-Null;"
+        "Start-Sleep 3;"
+        "Unregister-ScheduledTask -TaskName $n -Confirm:$false -EA 0;"
+        "Write-Host \"Sleep sent\"}"
+        "else{Write-Host \"No active user\"}"
+    ),
+    "logoff":    (
+        "try{"
+        "$lines=(query session 2>&1);"
+        "$active=$lines|Where-Object{$_ -match \"Active\"}|Select-Object -First 1;"
+        "if($active){"
+        "$id=($active -replace \"^.*?([0-9]+)\\s+Active.*\",\"$1\").Trim();"
+        "logoff $id;"
+        "Write-Host \"Logged off session: $id\"}"
+        "else{Write-Host \"No active session\"}}"
+        "catch{Write-Host \"Error: $_\"}"
+    ),
+    "cleartemp": (
+        "Remove-Item \"$env:TEMP\\*\" -Recurse -Force -EA 0;"
+        "Remove-Item \"C:\\Windows\\Temp\\*\" -Recurse -Force -EA 0;"
+        "Write-Host \"Temp cleared\""
+    ),
+    "flushdns":  "ipconfig /flushdns",
+    "gpupdate":  "gpupdate /force",
+}
+
+@app.post("/api/ctrl/{action}")
+async def system_ctrl(request: Request, action: str):
+    require_auth(request)
+    if action not in CTRL_SCRIPTS:
+        raise HTTPException(400, f"Unknown action: {action}")
+    body = await request.json()
+    device_id = body.get("device_id", "")
+    if not device_id:
+        raise HTTPException(400, "device_id required")
+    script = CTRL_SCRIPTS[action]
+    with _db_lock:
+        conn = db()
+        now = datetime.now(timezone.utc).isoformat()
+        cur = conn.execute(
+            "INSERT INTO commands(device_id,cmd_type,payload,status,created_at) VALUES(?,?,?,?,?)",
+            (device_id, "shell", json.dumps({"script": script}), "queued", now)
+        )
+        cmd_id = cur.lastrowid
+        conn.commit()
+    _log_audit(request, "system_ctrl", {"action": action, "device_id": device_id, "cmd_id": cmd_id})
+    return {"id": cmd_id, "action": action, "status": "queued"}
+
+@app.post("/api/ctrl/killproc")
+async def kill_proc(request: Request):
+    require_auth(request)
+    body = await request.json()
+    device_id = body.get("device_id", "")
+    pid = body.get("pid")
+    if not device_id or not pid:
+        raise HTTPException(400, "device_id and pid required")
+    script = f"Stop-Process -Id {int(pid)} -Force -EA SilentlyContinue; Write-Host \"Killed PID {int(pid)}\""
+    with _db_lock:
+        conn = db()
+        now = datetime.now(timezone.utc).isoformat()
+        cur = conn.execute(
+            "INSERT INTO commands(device_id,cmd_type,payload,status,created_at) VALUES(?,?,?,?,?)",
+            (device_id, "shell", json.dumps({"script": script}), "queued", now)
+        )
+        cmd_id = cur.lastrowid
+        conn.commit()
+    _log_audit(request, "kill_proc", {"pid": pid, "device_id": device_id})
+    return {"id": cmd_id, "status": "queued"}
+
+@app.post("/api/ctrl/svcaction")
+async def svc_action(request: Request):
+    require_auth(request)
+    body = await request.json()
+    device_id = body.get("device_id", "")
+    name = body.get("name", "")
+    action = body.get("action", "")
+    if not device_id or not name or action not in ("Start","Stop","Restart"):
+        raise HTTPException(400, "device_id, name, and valid action required")
+    script = f"{action}-Service -Name '{name}' -Force -EA SilentlyContinue; Get-Service -Name '{name}'|Select-Object Name,Status|ConvertTo-Json"
+    with _db_lock:
+        conn = db()
+        now = datetime.now(timezone.utc).isoformat()
+        cur = conn.execute(
+            "INSERT INTO commands(device_id,cmd_type,payload,status,created_at) VALUES(?,?,?,?,?)",
+            (device_id, "shell", json.dumps({"script": script}), "queued", now)
+        )
+        cmd_id = cur.lastrowid
+        conn.commit()
+    _log_audit(request, "svc_action", {"name": name, "action": action, "device_id": device_id})
+    return {"id": cmd_id, "status": "queued"}
+
+
 @app.get("/api/audit")
 async def get_audit(request: Request):
     require_auth(request)
