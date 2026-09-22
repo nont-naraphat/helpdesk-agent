@@ -250,16 +250,16 @@ textarea{font-family:var(--mono);resize:vertical}
             <button class="ctrl-btn danger" onclick="ctrlAction('shutdown','Shutdown Computer','This will shut down DEVICE completely.','Stop-Computer -Force')">
               <span class="ci">⏹</span>Shutdown
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('lock','Lock Screen','Lock the screen on DEVICE.','rundll32.exe user32.dll,LockWorkStation')">
+            <button class="ctrl-btn ok" onclick="ctrlAction('lock','Lock Screen','Lock the screen on DEVICE.','$u=(Get-WmiObject Win32_ComputerSystem).UserName;if($u){$n='BHLock_'+(Get-Random);Register-ScheduledTask -TaskName $n -Action(New-ScheduledTaskAction -Execute 'rundll32.exe' -Argument 'user32.dll,LockWorkStation') -Trigger(New-ScheduledTaskTrigger -Once -At((Get-Date).AddSeconds(2))) -Principal(New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive) -Force|Out-Null;Start-Sleep 3;Unregister-ScheduledTask -TaskName $n -Confirm:$false -EA 0;Write-Host "Screen locked for: $u"}else{Write-Host "No active user logged in"}')">
               <span class="ci">🔒</span>Lock Screen
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('sleep','Sleep','Put DEVICE to sleep.','Add-Type -Assembly System.Windows.Forms;[System.Windows.Forms.Application]::SetSuspendState(\"Suspend\",$false,$false)')">
+            <button class="ctrl-btn ok" onclick="ctrlAction('sleep','Sleep','Put DEVICE to sleep.','$u=(Get-WmiObject Win32_ComputerSystem).UserName;if($u){$n='BHSleep_'+(Get-Random);Register-ScheduledTask -TaskName $n -Action(New-ScheduledTaskAction -Execute 'rundll32.exe' -Argument 'powrprof.dll,SetSuspendState 0,1,0') -Trigger(New-ScheduledTaskTrigger -Once -At((Get-Date).AddSeconds(2))) -Principal(New-ScheduledTaskPrincipal -UserId $u -LogonType Interactive) -Force|Out-Null;Start-Sleep 3;Unregister-ScheduledTask -TaskName $n -Confirm:$false -EA 0;Write-Host "Sleep sent"}else{Write-Host "No active user"}')">
               <span class="ci">💤</span>Sleep
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('logoff','Log Off User','Log off the current user on DEVICE.','logoff')">
+            <button class="ctrl-btn ok" onclick="ctrlAction('try{$lines=(query session 2>&1);$active=$lines|Where-Object{$_ -match 'Active'}|Select-Object -First 1;if($active){$id=($active -replace '^[^0-9]*(\d+)\s+Active.*','$1').Trim();logoff $id;Write-Host "Logged off session: $id"}else{Write-Host "No active session found"}}catch{Write-Host "Error: $_"}','Log Off User','Log off the current user on DEVICE.','try{$lines=(query session 2>&1);$active=$lines|Where-Object{$_ -match 'Active'}|Select-Object -First 1;if($active){$id=($active -replace '^[^0-9]*(\d+)\s+Active.*','$1').Trim();logoff $id;Write-Host "Logged off session: $id"}else{Write-Host "No active session found"}}catch{Write-Host "Error: $_"}')">
               <span class="ci">↩</span>Log Off
             </button>
-            <button class="ctrl-btn ok" onclick="ctrlAction('clear-temp','Clear Temp Files','Clear temp files on DEVICE to free disk space.','Remove-Item -Path $env:TEMP\\* -Recurse -Force -EA SilentlyContinue; Remove-Item -Path C:\\Windows\\Temp\\* -Recurse -Force -EA SilentlyContinue; Write-Host \"Temp cleared.\"')">
+            <button class="ctrl-btn ok" onclick="ctrlAction('clear-temp','Clear Temp Files','Clear temp files on DEVICE to free disk space.','$before=[math]::Round((Get-ChildItem $env:TEMP -Recurse -EA 0|Measure-Object Length -Sum).Sum/1MB,1);Remove-Item -Path "$env:TEMP\*" -Recurse -Force -EA SilentlyContinue;Remove-Item -Path "C:\Windows\Temp\*" -Recurse -Force -EA SilentlyContinue;Remove-Item -Path "C:\Windows\Prefetch\*" -Force -EA SilentlyContinue;Write-Host "Temp cleared. Was: $($before)MB freed')" >
               <span class="ci">🧹</span>Clear Temp
             </button>
             <button class="ctrl-btn ok" onclick="ctrlAction('flush-dns','Flush DNS','Clear DNS cache on DEVICE.','ipconfig /flushdns')">
@@ -661,7 +661,7 @@ function ctrlAction(id,title,msg,script){
   document.getElementById('cm-title').textContent=title;
   document.getElementById('cm-msg').textContent=msg.replace('DEVICE',dev);
   const okBtn=document.getElementById('cm-ok');
-  okBtn.className=(['restart','shutdown','logoff'].includes(id)?'br bp':'bp')+' bsm';
+  okBtn.className=(['restart','shutdown','try{$lines=(query session 2>&1);$active=$lines|Where-Object{$_ -match 'Active'}|Select-Object -First 1;if($active){$id=($active -replace '^[^0-9]*(\d+)\s+Active.*','$1').Trim();logoff $id;Write-Host "Logged off session: $id"}else{Write-Host "No active session found"}}catch{Write-Host "Error: $_"}'].includes(id)?'br bp':'bp')+' bsm';
   okBtn.textContent=title;
   G.confirmCb=async()=>{
     closeConfirm();
@@ -763,13 +763,15 @@ async function fbGo(path){
   G.fbPath=(path||'C:\\').trim();
   document.getElementById('fb-in').value=G.fbPath;fbCrumb();
   const st=document.getElementById('fb-status');const bd=document.getElementById('fb-body');
-  st.innerHTML='<span class="spin"></span> Listing…';bd.innerHTML='';
+  const _fbStart=Date.now();
+    const _fbTimer=setInterval(()=>{const e=Math.round((Date.now()-_fbStart)/1000);const el=document.getElementById('fb-status');if(el&&el.innerHTML.includes('spin'))el.innerHTML=`<span class="spin"></span> Loading… ${e}s`;},1000);
+    st.innerHTML='<span class="spin"></span> Listing…';bd.innerHTML='';
   try{
-    const r=await runLive('listdir',{path:G.fbPath},3);
+    const r=await runLive('listdir',{path:G.fbPath});
     let data={};try{data=JSON.parse(r.result||'{}');}catch{data={error:r.result};}
-    if(data.error){st.innerHTML=`<span style="color:var(--red)">${esc(data.error)}</span>`;return;}
+    if(data.error){clearInterval(_fbTimer);st.innerHTML=`<span style="color:var(--red)">${esc(data.error)}</span>`;return;}
     const items=(data.items||[]).sort((a,b)=>a.type===b.type?a.name.localeCompare(b.name):a.type==='dir'?-1:1);
-    st.textContent=`${data.count} items`;
+    clearInterval(_fbTimer);st.textContent=`${data.count} items`;
     if(!items.length){bd.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px">(empty folder)</div>';return;}
     bd.innerHTML=`<table class="tbl"><thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Modified</th><th style="text-align:right">Actions</th></tr></thead><tbody>
     ${items.map(it=>{
@@ -789,7 +791,7 @@ async function fbGo(path){
   }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
 }
 async function fbRead(path){
-  const r=await runLive('readfile',{path},3);
+  const r=await runLive('readfile',{path});
   let d={};try{d=JSON.parse(r.result||'{}');}catch{d={content:r.result};}
   if(d.error){showResult('Read Error',d.error,'',true);return;}
   showResult('📄 '+path.split('\\').pop(),d.content||'(empty)',`Path: ${path} | Size: ${fmtSize(d.size)}`);
@@ -797,7 +799,7 @@ async function fbRead(path){
 async function fbDl(path){
   const st=document.getElementById('fb-status');
   st.innerHTML='<span class="spin"></span> Requesting download…';
-  const r=await runLive('getfile',{path},10);
+  const r=await runLive('getfile',{path});
   let d={};try{d=JSON.parse(r.result||'{}');}catch{d={error:r.result};}
   if(d.error){showResult('Download Refused',d.error,'',true);st.textContent='';return;}
   const a=document.createElement('a');a.href=`/api/commands/${r.id}/download`;a.download='';
@@ -814,15 +816,16 @@ async function runShell(script,label){
   const btn=document.getElementById('sh-run');if(btn)btn.disabled=true;
   const out=document.getElementById('sh-out');const st=document.getElementById('sh-status');
   if(out){out.innerHTML+=`<span class="sy">## ${esc(label)} ##\n</span>`;}
-  if(st)st.innerHTML='<span class="spin"></span> Running on '+esc(G.devInfo.hostname||'device')+'…';
+  const _shStart=Date.now();const _shTimer=setInterval(()=>{const e=Math.round((Date.now()-_shStart)/1000);if(st&&st.innerHTML.includes('spin'))st.innerHTML=`<span class="spin"></span> Running… ${e}s`;},1000);
+    if(st)st.innerHTML='<span class="spin"></span> Running on '+esc(G.devInfo.hostname||'device')+'…';
   try{
-    const r=await runLive('shell',{script:script},300);
+    const r=await runLive('shell',{script:script});
     if(out){out.innerHTML+=esc(r.result||'(no output)')+'\n\n';out.scrollTop=out.scrollHeight;}
-    if(st)st.textContent=`Done · Exit ${r.exit_code??0} · ${relTime(r.completed_at)}`;
+    clearInterval(_shTimer);if(st)st.textContent=`Done · Exit ${r.exit_code??0} · ${relTime(r.completed_at)}`;
     await loadHistory();
   }catch(e){
     if(out){out.innerHTML+=`<span class="er">ERROR: ${esc(e.message)}</span>\n\n`;}
-    if(st)st.textContent='Error: '+e.message;
+    clearInterval(_shTimer);if(st)st.textContent='Error: '+e.message;
   }
   if(btn)btn.disabled=false;
 }
@@ -858,17 +861,22 @@ async function viewResult(id){
 }
 
 /* ── LIVE COMMAND ── */
-async function runLive(type,payload,maxWait){
-  maxWait=maxWait||120;
+async function runLive(type,payload,_unused){
+  // No artificial timeout — poll until the agent responds.
+  // The server CMD_TIMEOUT per type is the real limit on the agent side.
   const r=await api('POST','/api/commands',{device_id:G.devId,cmd_type:type,payload:payload||{},confirm:true});
   if(!r)throw new Error('auth');
-  for(let i=0;i<maxWait;i++){
-    await new Promise(res=>setTimeout(res,1000));
+  const started=Date.now();
+  while(true){
+    await new Promise(res=>setTimeout(res,1500));
     const res=await api('GET',`/api/commands/${r.id}/result`);
     if(!res)throw new Error('auth');
     if(['done','failed','timeout','cancelled'].includes(res.status))return{id:r.id,...res};
+    // Update any visible status with elapsed time
+    const el=Math.round((Date.now()-started)/1000);
+    const st=document.getElementById('fb-status')||document.getElementById('sh-status');
+    if(st&&st.innerHTML.includes('spin'))st.innerHTML=`<span class="spin"></span> Waiting for agent… ${el}s`;
   }
-  return{id:r.id,status:'timeout',result:'Timed out'};
 }
 
 /* ── RESULT MODAL ── */

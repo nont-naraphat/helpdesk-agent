@@ -50,7 +50,7 @@ CMD_TIMEOUT = {
     "defender": 60,   "updates":  120,  "printers": 30,
     "processes": 30,  "wifi":      30,  "gpresult": 120,
     "ping":     30,   "shell":    300,
-    "listdir":  30,   "readfile":  30,  "getfile":  120,
+    "listdir": 600,   "readfile": 600,  "getfile":  120,
 }
 
 CMD_LABELS = {
