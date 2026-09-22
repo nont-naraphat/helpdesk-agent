@@ -3,483 +3,919 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Helpdesk Endpoint Console</title>
+<title>Endpoint Manager — SunPassion IT</title>
 <style>
 :root{
-  --bg:#0d1117;--surface:#161b22;--surface2:#1c2128;--border:#30363d;
-  --text:#e6edf3;--muted:#8b949e;--accent:#2563eb;--accent-h:#1d4ed8;
-  --green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--purple:#8b5cf6;--gray:#6b7280;
+  --bg:#0d1117;--surface:#161b22;--s2:#1c2128;--s3:#21262d;
+  --border:#30363d;--border2:#3d444d;
+  --text:#e6edf3;--muted:#8b949e;--muted2:#6e7681;
+  --blue:#2563eb;--blue-h:#1d4ed8;--blue-d:rgba(37,99,235,.15);
+  --green:#22c55e;--green-d:rgba(34,197,94,.12);
+  --yellow:#f59e0b;--yellow-d:rgba(245,158,11,.12);
+  --red:#ef4444;--red-d:rgba(239,68,68,.12);
+  --purple:#8b5cf6;--purple-d:rgba(139,92,246,.12);
+  --orange:#f97316;
+  --font:-apple-system,"Segoe UI",system-ui,sans-serif;
   --mono:"Cascadia Code","Consolas","Courier New",monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;font-size:14px;min-height:100vh}
-a{color:var(--accent);text-decoration:none;cursor:pointer}
-button{cursor:pointer;border:none;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;transition:background .15s,opacity .15s}
+body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:13px;height:100vh;overflow:hidden}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+button{cursor:pointer;border:none;border-radius:6px;padding:5px 12px;font-size:12px;font-weight:500;transition:all .12s;font-family:var(--font)}
 button:disabled{opacity:.4;cursor:not-allowed}
-input,textarea{background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;padding:7px 10px;outline:none;width:100%}
-input:focus,textarea:focus{border-color:var(--accent)}
+input,textarea,select{background:var(--s2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:12px;padding:6px 10px;outline:none;width:100%;font-family:var(--font)}
+input:focus,textarea:focus,select:focus{border-color:var(--blue)}
 textarea{font-family:var(--mono);resize:vertical}
-table{border-collapse:collapse;width:100%}
-th,td{padding:8px 12px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
-th{font-weight:600;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.4px}
-tr:hover td{background:var(--surface2)}
-.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:var(--accent-h)}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}.btn-ghost:hover{background:var(--surface2)}
-.btn-sm{padding:3px 10px;font-size:12px}
-#login-page{display:flex;align-items:center;justify-content:center;min-height:100vh}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;width:340px}
-.login-card h1{font-size:20px;margin-bottom:24px;display:flex;align-items:center;gap:8px}
-.login-card input{margin-bottom:12px}
-.login-err{color:var(--red);font-size:13px;margin-top:8px;display:none}
-#app{display:none;height:100vh}
+
+/* Buttons */
+.bp{background:var(--blue);color:#fff}.bp:hover{background:var(--blue-h)}
+.bg{background:transparent;border:1px solid var(--border);color:var(--text)}.bg:hover{background:var(--s2)}
+.br{background:var(--red);color:#fff}.br:hover{background:#dc2626}
+.by{background:var(--yellow);color:#000}.by:hover{background:#d97706}
+.bsm{padding:3px 10px;font-size:11px}
+.bxs{padding:2px 7px;font-size:10px}
+
+/* Layout */
+#login-page{display:flex;align-items:center;justify-content:center;height:100vh}
+.lcard{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:36px;width:320px}
+.lcard h1{font-size:18px;font-weight:700;margin-bottom:4px}
+.lcard .sub{color:var(--muted);font-size:12px;margin-bottom:20px}
+.lerr{color:var(--red);font-size:12px;margin-top:6px;display:none}
+
+#app{display:none;height:100vh;flex-direction:column}
 #app.on{display:flex}
-#sidebar{width:200px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:16px 0}
-.brand{padding:0 16px 20px;font-weight:700;font-size:15px}.brand span{color:var(--accent)}
-.nav{display:flex;align-items:center;gap:8px;padding:8px 16px;cursor:pointer;color:var(--muted)}
-.nav:hover{background:var(--surface2);color:var(--text)}
-.nav.active{background:var(--surface2);color:var(--text);font-weight:600}
-.spacer{flex:1}
-#main{flex:1;overflow-y:auto;display:flex;flex-direction:column}
-.page{display:none;flex:1;padding:24px}
-.page.active{display:block}
-.phead{display:flex;align-items:center;gap:12px;margin-bottom:20px}
-.phead h1{font-size:18px;font-weight:700}.phead .sp{flex:1}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin-bottom:16px}
-.card h3{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
-.dot-online{background:var(--green);box-shadow:0 0 6px var(--green)}
-.dot-warning{background:var(--yellow)}.dot-offline{background:var(--gray)}
-.breadcrumb{font-size:13px;color:var(--muted);margin-bottom:16px}
-.breadcrumb a{color:var(--accent)}.breadcrumb span{margin:0 6px}
-.search-row{display:flex;gap:8px;align-items:center;margin-bottom:16px}
-.search-row input{max-width:300px}
-.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty{text-align:center;color:var(--muted);padding:50px 0}
-.empty .i{font-size:40px;margin-bottom:12px}
-/* inventory grid */
-.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
-.inv-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
-.inv-card .h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);font-weight:600;font-size:13px}
-.inv-card .h .u{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
-.inv-card .b{padding:12px 14px;font-size:12.5px}
-.kv{display:flex;gap:8px;padding:3px 0}
-.kv .k{color:var(--muted);min-width:120px;flex-shrink:0}
-.kv .v{word-break:break-word}
-.mini-table{width:100%;font-size:12px}
-.mini-table td{padding:3px 6px;border-bottom:1px solid var(--border)}
-details.raw{margin-top:8px}
-details.raw summary{cursor:pointer;color:var(--muted);font-size:11px}
-details.raw pre{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:10px;font-family:var(--mono);font-size:11px;white-space:pre-wrap;word-break:break-all;max-height:260px;overflow:auto;margin-top:6px}
-/* detail info strip */
-.info-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:18px}
-.info-item{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
-.info-item .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
-.info-item .v{font-size:13px;font-weight:500;word-break:break-word}
-/* tabs */
-.tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;border-bottom:1px solid var(--border)}
-.tab{padding:8px 16px;cursor:pointer;color:var(--muted);font-size:13px;border-bottom:2px solid transparent;margin-bottom:-1px}
-.tab:hover{color:var(--text)}
-.tab.active{color:var(--text);font-weight:600;border-bottom-color:var(--accent)}
-.tabpage{display:none}.tabpage.active{display:block}
-/* file browser */
-.fb-bar{display:flex;gap:8px;align-items:center;margin-bottom:12px}
-.fb-bar input{flex:1;font-family:var(--mono)}
-.fb-crumb{font-family:var(--mono);font-size:12px;color:var(--muted);margin-bottom:8px;word-break:break-all}
-.fb-crumb a{color:var(--accent)}
-.fb-table td{padding:6px 12px;font-size:13px}
+
+/* Sidebar */
+#layout{display:flex;flex:1;min-height:0}
+#sidebar{width:210px;flex-shrink:0;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column}
+#sb-head{padding:12px 12px 8px;border-bottom:1px solid var(--border)}
+#sb-head .brand{font-weight:700;font-size:13px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+#sb-head .brand .dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);animation:glow 2s ease-in-out infinite}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:.4}}
+#sb-search input{font-size:12px}
+#sb-lbl{padding:8px 12px 4px;font-size:10px;font-weight:600;color:var(--muted2);text-transform:uppercase;letter-spacing:.6px}
+#dev-list{flex:1;overflow-y:auto}
+.ditem{display:flex;align-items:center;gap:7px;padding:7px 10px;cursor:pointer;border-left:2px solid transparent;transition:all .1s}
+.ditem:hover{background:var(--s2)}.ditem.sel{background:var(--s2);border-left-color:var(--blue)}
+.ddot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ddot.on{background:var(--green);box-shadow:0 0 5px var(--green)}.ddot.warn{background:var(--yellow)}.ddot.off{background:var(--border2)}
+.dhost{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.dts{font-size:10px;color:var(--muted2);white-space:nowrap}
+#sb-foot{padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:6px}
+#sb-foot button{flex:1;font-size:11px}
+
+/* Main */
+#main{flex:1;overflow-y:auto;min-width:0}
+#no-dev{display:flex;align-items:center;justify-content:center;height:100%;color:var(--muted);flex-direction:column;gap:8px}
+#no-dev .icon{font-size:40px}
+.page{display:none;padding:16px 20px}
+.page.on{display:block}
+
+/* Device page */
+.dh-bc{font-size:12px;color:var(--muted);margin-bottom:10px}
+.dh-bc a{color:var(--blue);cursor:pointer}
+.dh-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:12px}
+.dh-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px}
+.dh-label{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.dh-val{font-size:12px;font-weight:500;word-break:break-all}
+.dh-val.mono{font-family:var(--mono);font-size:11px}
+
+/* Section cards */
+.sec{background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden}
+.sec-h{display:flex;align-items:center;gap:8px;padding:9px 14px;background:var(--s2);border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.sec-h .title{font-size:12px;font-weight:600;flex:1}
+.sec-h .chev{color:var(--muted);font-size:11px;transition:transform .15s}
+.sec-h.open .chev{transform:rotate(180deg)}
+.sec-h .badge{font-size:10px;padding:1px 6px;border-radius:10px;font-weight:600}
+.sec-b{padding:12px 14px}
+.sec-b.pad0{padding:0}
+
+/* Status badges */
+.bdg{display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:600}
+.bdg-g{background:var(--green-d);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.bdg-r{background:var(--red-d);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.bdg-y{background:var(--yellow-d);color:var(--yellow);border:1px solid rgba(245,158,11,.3)}
+.bdg-b{background:var(--blue-d);color:#60a5fa;border:1px solid rgba(37,99,235,.3)}
+.bdg-gray{background:var(--s2);color:var(--muted);border:1px solid var(--border)}
+.bdg-p{background:var(--purple-d);color:var(--purple);border:1px solid rgba(139,92,246,.3)}
+
+/* System control buttons */
+.ctrl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px}
+.ctrl-btn{padding:10px;border-radius:8px;display:flex;flex-direction:column;align-items:center;gap:5px;font-size:12px;font-weight:500;border:1px solid var(--border);background:var(--s2);transition:all .15s}
+.ctrl-btn .ci{font-size:20px}
+.ctrl-btn:hover{border-color:var(--border2);background:var(--s3);transform:translateY(-1px)}
+.ctrl-btn.danger:hover{border-color:var(--red);color:var(--red);background:var(--red-d)}
+.ctrl-btn.warn:hover{border-color:var(--yellow);color:var(--yellow);background:var(--yellow-d)}
+.ctrl-btn.ok:hover{border-color:var(--blue);color:#60a5fa;background:var(--blue-d)}
+
+/* Quick commands */
+.qc-grid{display:flex;flex-wrap:wrap;gap:6px}
+.qc-btn{background:var(--s2);border:1px solid var(--border);color:var(--text);font-size:12px;border-radius:6px;padding:5px 12px;transition:all .15s}
+.qc-btn:hover{border-color:var(--blue);color:#60a5fa;background:var(--blue-d)}
+.qc-btn.running{border-color:var(--purple);color:var(--purple);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+/* Inventory display */
+.inv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.inv-card{background:var(--s2);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.inv-ch{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid var(--border)}
+.inv-ch .ct{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;flex:1}
+.inv-ch .cu{font-size:10px;color:var(--muted2)}
+.inv-cb{padding:10px 12px}
+.kv{display:flex;gap:8px;padding:3px 0;border-bottom:1px solid var(--border);font-size:12px}
+.kv:last-child{border-bottom:none}
+.kk{color:var(--muted);min-width:110px;flex-shrink:0}
+.kv .val{word-break:break-word}
+.kv .mono{font-family:var(--mono);font-size:11px}
+
+/* Usage bars */
+.ubar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-top:4px}
+.ufill{height:100%;border-radius:2px}
+
+/* Tables */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{padding:7px 10px;text-align:left;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap}
+.tbl td{padding:6px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--s2)}
+.tbl td.mono{font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+/* File browser */
+.fb-bar{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.fb-bar input{flex:1;font-family:var(--mono);font-size:12px}
+.fb-crumb{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px;word-break:break-all}
+.fb-crumb a{color:var(--blue);cursor:pointer}
+.fb-crumb span{color:var(--border2)}
 .fb-row-dir{cursor:pointer}
-.fb-row-dir:hover td{background:var(--surface2)}
-.fb-name{display:flex;align-items:center;gap:8px}
-.fb-actions{text-align:right;white-space:nowrap}
-.fb-note{font-size:11px;color:var(--muted);margin-top:8px}
-/* shell */
-.sh-out{background:#0d1117;border:1px solid var(--border);border-radius:6px;padding:14px;font-family:var(--mono);font-size:12px;line-height:1.55;white-space:pre-wrap;word-break:break-all;max-height:52vh;overflow:auto;margin-top:12px;min-height:80px}
-.sh-warn{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:10px;font-size:12px;color:#fca5a5;margin-bottom:10px}
-.status-line{font-size:12px;color:var(--muted);margin:8px 0}
-/* audit */
-.audit{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
-.audit .ts{font-size:11px;color:var(--muted);white-space:nowrap;min-width:150px;font-family:var(--mono)}
-.audit .ac{font-weight:600;font-size:12px;color:var(--accent);min-width:130px}
-.audit .de{font-size:12px;color:var(--muted);word-break:break-all}
-.pill{display:inline-block;padding:1px 8px;border-radius:10px;font-size:11px;background:var(--surface2);border:1px solid var(--border)}
+.fb-row-dir:hover td{background:var(--s2)}
+
+/* Shell */
+.sh-out{background:#0a0c0f;border:1px solid var(--border);border-radius:6px;padding:12px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all;max-height:45vh;overflow:auto;margin-top:10px;min-height:60px;color:#9ccc65}
+.sh-out .sy{color:#64b5f6}.sh-out .er{color:#ef9a9a}
+
+/* History table */
+.hist-result-btn{background:transparent;border:1px solid var(--border);color:var(--muted);font-size:11px;padding:2px 8px;border-radius:4px}
+.hist-result-btn:hover{border-color:var(--blue);color:#60a5fa}
+
+/* Stat */
+.stat-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-bottom:10px}
+.stat-c{background:var(--s2);border:1px solid var(--border);border-radius:8px;padding:12px}
+.stat-c .sl{font-size:10px;color:var(--muted2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
+.stat-c .sv{font-size:20px;font-weight:700}
+.stat-c .ss{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* Confirm modal */
+#confirm-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center}
+#confirm-modal.open{display:flex}
+.cm{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:380px;max-width:94vw}
+.cm h2{font-size:15px;font-weight:700;margin-bottom:8px}
+.cm .msg{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.cm .acts{display:flex;gap:8px;justify-content:flex-end}
+
+/* Result modal */
+#result-modal{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:none;align-items:center;justify-content:center}
+#result-modal.open{display:flex}
+.rm{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:700px;max-width:96vw;max-height:90vh;overflow:auto}
+.rm-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.rm-h h2{font-size:14px;font-weight:700}
+.rm-meta{font-size:11px;color:var(--muted);margin-bottom:8px;font-family:var(--mono)}
+.rm-body{background:#0a0c0f;border:1px solid var(--border);border-radius:6px;padding:14px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all;max-height:65vh;overflow:auto;color:#9ccc65}
+
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .5s linear infinite;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+.section-sep{height:1px;background:var(--border);margin:4px 0}
+.filter-row{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap;align-items:center}
+.fbtn{padding:3px 10px;border-radius:5px;font-size:11px;cursor:pointer;border:1px solid var(--border);background:var(--s2);color:var(--muted);transition:all .1s}
+.fbtn.act{border-color:var(--blue);color:#60a5fa;background:var(--blue-d)}
+.sec-status{font-size:11px;color:var(--muted);padding:4px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.info-note{background:var(--s2);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:11px;color:var(--muted);margin-top:8px}
 </style>
 </head>
 <body>
 
+<!-- LOGIN -->
 <div id="login-page">
-  <div class="login-card">
-    <h1>🔧 <span>Endpoint</span> Console</h1>
-    <input type="password" id="login-pw" placeholder="Password">
-    <button class="btn-primary" style="width:100%;margin-top:4px" onclick="doLogin()">Sign In</button>
-    <div class="login-err" id="login-err">Wrong password</div>
+  <div class="lcard">
+    <h1>🖥 Endpoint Manager</h1>
+    <div class="sub">SunPassion IT Infrastructure</div>
+    <input type="password" id="lpw" placeholder="Admin password" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="bp" style="width:100%;margin-top:6px" onclick="doLogin()">Sign In</button>
+    <div class="lerr" id="lerr">Wrong password</div>
   </div>
 </div>
 
+<!-- APP -->
 <div id="app">
-  <nav id="sidebar">
-    <div class="brand">🔧 <span>Endpoint</span></div>
-    <div class="nav active" id="nav-devices" onclick="nav('devices')">🖥 Devices</div>
-    <div class="nav" id="nav-audit" onclick="nav('audit')">📝 Audit</div>
-    <div class="spacer"></div>
-    <div style="padding:8px 16px"><button class="btn-ghost" style="width:100%" onclick="doLogout()">Sign Out</button></div>
-  </nav>
-  <div id="main">
+<div id="layout">
 
-    <!-- DEVICES -->
-    <div id="page-devices" class="page active">
-      <div class="phead"><h1>Devices</h1><div class="sp"></div>
-        <button class="btn-ghost btn-sm" onclick="loadDevices()">↻ Refresh</button></div>
-      <div class="search-row"><input id="dsearch" placeholder="Search hostname, user, IP…" oninput="renderDevices()"></div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <table><thead><tr>
-          <th>Status</th><th>Hostname</th><th>User</th><th>IP</th><th>OS</th><th>Last Report</th>
-        </tr></thead><tbody id="dtbody"><tr><td colspan="6" class="empty">Loading…</td></tr></tbody></table>
-      </div>
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div id="sb-head">
+      <div class="brand"><span class="dot"></span>Endpoint Manager</div>
+      <input id="dsearch" placeholder="🔍 Search…" oninput="renderList()">
     </div>
+    <div id="sb-lbl">Devices <span id="dcount" style="font-weight:400;font-size:10px;text-transform:none"></span></div>
+    <div id="dev-list"></div>
+    <div id="sb-foot">
+      <button class="bg bsm" onclick="loadDevices()">↻ Refresh</button>
+      <button class="bg bsm" onclick="showAudit()">📋 Audit</button>
+      <button class="bg bsm" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
 
-    <!-- DEVICE DETAIL -->
+  <!-- MAIN -->
+  <div id="main">
+    <div id="no-dev"><div class="icon">🖥</div><div>Select a device from the list</div></div>
+
+    <!-- DEVICE PAGE -->
     <div id="page-device" class="page">
-      <div class="breadcrumb"><a onclick="nav('devices')">Devices</a><span>›</span><span id="d-host">…</span></div>
-      <div class="phead">
-        <span id="d-dot" class="dot dot-offline"></span><h1 id="d-title">—</h1><div class="sp"></div>
-        <button class="btn-ghost btn-sm" onclick="refreshInventory()">⟳ Collect Now</button>
-        <button class="btn-ghost btn-sm" onclick="openDevice(currentDevice,currentHost)">↻ Refresh</button>
-      </div>
-      <div class="info-strip" id="d-info"></div>
-      <div class="tabs">
-        <div class="tab active" data-t="inv"   onclick="tab('inv')">📊 Inventory</div>
-        <div class="tab"        data-t="files" onclick="tab('files')">📁 Files</div>
-        <div class="tab"        data-t="shell" onclick="tab('shell')">⌨ PowerShell</div>
+      <div class="dh-bc"><a onclick="clearDevice()">Devices</a> › <span id="dh-bc-host"></span></div>
+
+      <!-- INFO STRIP -->
+      <div class="dh-strip" id="dh-strip"></div>
+
+      <!-- LIVE STATS (auto-populated from sysinfo) -->
+      <div id="live-stats" style="margin-bottom:12px;display:none">
+        <div class="stat-row" id="stat-row"></div>
       </div>
 
-      <div id="tab-inv" class="tabpage active">
-        <div id="inv-wrap"><div class="empty"><div class="i">📊</div>No inventory yet — the agent reports automatically, or click “Collect Now”.</div></div>
-      </div>
-
-      <div id="tab-files" class="tabpage">
-        <div class="card">
-          <div class="fb-bar">
-            <button class="btn-ghost btn-sm" onclick="fbUp()" title="Up one level">⬆</button>
-            <input id="fb-path" placeholder="C:\" onkeydown="if(event.key==='Enter')fbGo(this.value)">
-            <button class="btn-primary btn-sm" onclick="fbGo(document.getElementById('fb-path').value)">Go</button>
+      <!-- ⚡ SYSTEM CONTROL -->
+      <div class="sec" id="sec-ctrl">
+        <div class="sec-h open" onclick="toggleSec('ctrl')"><span>⚡</span><span class="title">System Control</span><span class="chev">▾</span></div>
+        <div id="sec-ctrl-b" class="sec-b">
+          <div class="ctrl-grid">
+            <button class="ctrl-btn warn" onclick="ctrlAction('restart','Restart Computer','This will restart DEVICE. Agent will be offline for ~1-2 minutes.','Restart-Computer -Force')">
+              <span class="ci">🔄</span>Restart
+            </button>
+            <button class="ctrl-btn danger" onclick="ctrlAction('shutdown','Shutdown Computer','This will shut down DEVICE completely.','Stop-Computer -Force')">
+              <span class="ci">⏹</span>Shutdown
+            </button>
+            <button class="ctrl-btn ok" onclick="ctrlAction('lock','Lock Screen','Lock the screen on DEVICE.','rundll32.exe user32.dll,LockWorkStation')">
+              <span class="ci">🔒</span>Lock Screen
+            </button>
+            <button class="ctrl-btn ok" onclick="ctrlAction('sleep','Sleep','Put DEVICE to sleep.','Add-Type -Assembly System.Windows.Forms;[System.Windows.Forms.Application]::SetSuspendState(\"Suspend\",$false,$false)')">
+              <span class="ci">💤</span>Sleep
+            </button>
+            <button class="ctrl-btn ok" onclick="ctrlAction('logoff','Log Off User','Log off the current user on DEVICE.','logoff')">
+              <span class="ci">↩</span>Log Off
+            </button>
+            <button class="ctrl-btn ok" onclick="ctrlAction('clear-temp','Clear Temp Files','Clear temp files on DEVICE to free disk space.','Remove-Item -Path $env:TEMP\\* -Recurse -Force -EA SilentlyContinue; Remove-Item -Path C:\\Windows\\Temp\\* -Recurse -Force -EA SilentlyContinue; Write-Host \"Temp cleared.\"')">
+              <span class="ci">🧹</span>Clear Temp
+            </button>
+            <button class="ctrl-btn ok" onclick="ctrlAction('flush-dns','Flush DNS','Clear DNS cache on DEVICE.','ipconfig /flushdns')">
+              <span class="ci">🌐</span>Flush DNS
+            </button>
+            <button class="ctrl-btn ok" onclick="ctrlAction('gpupdate','Group Policy Update','Run gpupdate on DEVICE.','gpupdate /force')">
+              <span class="ci">📜</span>GP Update
+            </button>
           </div>
-          <div class="fb-crumb" id="fb-crumb"></div>
-          <div id="fb-status" class="status-line"></div>
-          <table class="fb-table"><tbody id="fb-body"></tbody></table>
-          <div class="fb-note">Browsing &amp; reading text files is unrestricted. Downloading a file only works for paths inside the agent’s allowlist; other paths are refused by the agent and every download is logged.</div>
         </div>
       </div>
 
-      <div id="tab-shell" class="tabpage">
-        <div class="card">
-          <div class="sh-warn">⚠️ Commands run as SYSTEM on this device and are audit-logged.</div>
-          <textarea id="sh-input" rows="4" placeholder="Get-Service | Where-Object Status -eq 'Running' | Select-Object -First 10"></textarea>
-          <div style="margin-top:8px;display:flex;justify-content:flex-end;gap:8px">
-            <button class="btn-ghost btn-sm" onclick="document.getElementById('sh-out').textContent='';">Clear</button>
-            <button class="btn-primary btn-sm" id="sh-run" onclick="shellRun()">▶ Run</button>
+      <!-- 📋 QUICK COLLECTORS -->
+      <div class="sec" id="sec-qc">
+        <div class="sec-h open" onclick="toggleSec('qc')"><span>📋</span><span class="title">Quick Collectors</span><span class="chev">▾</span></div>
+        <div id="sec-qc-b" class="sec-b">
+          <div style="margin-bottom:8px;font-size:11px;color:var(--muted)">Collect data from device — results appear below in Inventory section</div>
+          <div class="qc-grid" id="qc-grid">
+            <button class="qc-btn" id="qcb-sysinfo"   onclick="collect('sysinfo')">🖥 System Info</button>
+            <button class="qc-btn" id="qcb-netinfo"   onclick="collect('netinfo')">🌐 Network</button>
+            <button class="qc-btn" id="qcb-processes" onclick="collect('processes')">⚙ Processes</button>
+            <button class="qc-btn" id="qcb-defender"  onclick="collect('defender')">🛡 Defender</button>
+            <button class="qc-btn" id="qcb-updates"   onclick="collect('updates')">⬆ Updates</button>
+            <button class="qc-btn" id="qcb-eventlog"  onclick="collect('eventlog')">📋 Event Log</button>
+            <button class="qc-btn" id="qcb-printers"  onclick="collect('printers')">🖨 Printers</button>
+            <button class="qc-btn" id="qcb-wifi"      onclick="collect('wifi')">📶 Wi-Fi</button>
+            <button class="qc-btn" id="qcb-gpresult"  onclick="collect('gpresult')">📜 Group Policy</button>
+            <button class="qc-btn" id="qcb-services"  onclick="collectShellData('services','⚙ Services','Get-Service|Sort-Object Status,DisplayName|Select-Object Name,DisplayName,Status,StartType|ConvertTo-Json -Depth 2')">⚙ Services</button>
+            <button class="qc-btn" id="qcb-software"  onclick="collectShellData('software','📦 Software','Get-ItemProperty HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*,HKLM:\\Software\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*|Where-Object{$_.DisplayName}|Select-Object DisplayName,DisplayVersion,Publisher|Sort-Object DisplayName|ConvertTo-Json -Depth 2')">📦 Software</button>
+            <button class="qc-btn" id="qcb-startup"   onclick="collectShellData('startup','🚀 Startup','Get-CimInstance Win32_StartupCommand|Select-Object Name,Command,Location,User|ConvertTo-Json -Depth 2')">🚀 Startup</button>
+            <button class="qc-btn" id="qcb-users"     onclick="collectShellData('users','👤 Users','Get-LocalUser|Select-Object Name,Enabled,LastLogon,Description|ConvertTo-Json -Depth 2')">👤 Local Users</button>
+            <button class="qc-btn" id="qcb-diskhealth" onclick="collectShellData('diskhealth','💿 Disk Health','Get-PhysicalDisk|Select-Object FriendlyName,MediaType,HealthStatus,OperationalStatus,Size,@{N=\"Size_GB\";E={[math]::Round($_.Size/1GB,1)}}|ConvertTo-Json -Depth 2')">💿 Disk Health</button>
+            <button class="qc-btn" id="qcb-ping"      onclick="pingTarget()">📡 Ping…</button>
+            <button class="qc-btn" id="qcb-all"       onclick="collectAll()">⚡ Collect All</button>
           </div>
-          <div id="sh-status" class="status-line"></div>
+        </div>
+      </div>
+
+      <!-- 📊 INVENTORY DATA -->
+      <div class="sec" id="sec-inv" style="display:none">
+        <div class="sec-h open" onclick="toggleSec('inv')"><span>📊</span><span class="title">Inventory Data</span><span id="inv-upd" style="font-size:11px;color:var(--muted);margin-left:auto"></span><span class="chev">▾</span></div>
+        <div id="sec-inv-b" class="sec-b">
+          <div class="inv-grid" id="inv-grid"></div>
+        </div>
+      </div>
+
+      <!-- ⚙ SERVICES MANAGER -->
+      <div class="sec" id="sec-services" style="display:none">
+        <div class="sec-h open" onclick="toggleSec('services')"><span>⚙</span><span class="title">Services</span><span id="svc-count" class="badge bdg bdg-gray">0</span><span class="chev">▾</span></div>
+        <div id="sec-services-b" class="sec-b pad0">
+          <div style="padding:8px 14px;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center">
+            <input id="svc-filter" placeholder="Filter services…" style="max-width:220px" oninput="renderServices()">
+            <div class="filter-row" style="margin:0">
+              <div class="fbtn act" id="sf-all"     onclick="svcFilter('all')">All</div>
+              <div class="fbtn"     id="sf-running" onclick="svcFilter('running')" style="color:var(--green)">Running</div>
+              <div class="fbtn"     id="sf-stopped" onclick="svcFilter('stopped')" style="color:var(--red)">Stopped</div>
+            </div>
+          </div>
+          <div style="max-height:340px;overflow-y:auto">
+            <table class="tbl" id="svc-table">
+              <thead><tr><th>Display Name</th><th>Status</th><th>Start Type</th><th style="text-align:right">Actions</th></tr></thead>
+              <tbody id="svc-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- 📦 SOFTWARE / STARTUP / USERS tabs -->
+      <div class="sec" id="sec-software" style="display:none">
+        <div class="sec-h open" onclick="toggleSec('software')"><span>📦</span><span class="title">Installed Software</span><span id="sw-count" class="badge bdg bdg-gray"></span><span class="chev">▾</span></div>
+        <div id="sec-software-b" class="sec-b pad0">
+          <div style="padding:8px 14px;border-bottom:1px solid var(--border)">
+            <input id="sw-filter" placeholder="Filter by name or publisher…" oninput="renderSoftware()">
+          </div>
+          <div style="max-height:320px;overflow-y:auto">
+            <table class="tbl" id="sw-table">
+              <thead><tr><th>Name</th><th>Version</th><th>Publisher</th></tr></thead>
+              <tbody id="sw-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec" id="sec-startup" style="display:none">
+        <div class="sec-h open" onclick="toggleSec('startup')"><span>🚀</span><span class="title">Startup Programs</span><span class="chev">▾</span></div>
+        <div id="sec-startup-b" class="sec-b pad0">
+          <table class="tbl"><thead><tr><th>Name</th><th>Command</th><th>Location</th><th>User</th></tr></thead>
+          <tbody id="startup-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <div class="sec" id="sec-users" style="display:none">
+        <div class="sec-h open" onclick="toggleSec('users')"><span>👤</span><span class="title">Local Users</span><span class="chev">▾</span></div>
+        <div id="sec-users-b" class="sec-b pad0">
+          <table class="tbl"><thead><tr><th>Name</th><th>Enabled</th><th>Last Logon</th><th>Description</th></tr></thead>
+          <tbody id="users-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- 📁 FILE BROWSER -->
+      <div class="sec" id="sec-files">
+        <div class="sec-h open" onclick="toggleSec('files')"><span>📁</span><span class="title">File Browser</span><span class="chev">▾</span></div>
+        <div id="sec-files-b" class="sec-b">
+          <div class="fb-bar">
+            <button class="bg bsm" onclick="fbUp()" title="Up">⬆</button>
+            <input id="fb-in" placeholder="C:\" style="font-family:var(--mono)" onkeydown="if(event.key==='Enter')fbGo(this.value)" value="C:\">
+            <button class="bp bsm" onclick="fbGo(document.getElementById('fb-in').value)">Go</button>
+          </div>
+          <div class="fb-crumb" id="fb-crumb"></div>
+          <div id="fb-status" style="font-size:11px;color:var(--muted);padding:2px 0;display:flex;align-items:center;gap:6px"></div>
+          <div id="fb-body" style="max-height:380px;overflow-y:auto;margin-top:6px"></div>
+          <div class="info-note">Read text files inline · Download files (allowlist-gated, audit-logged) · Click folders to navigate</div>
+        </div>
+      </div>
+
+      <!-- 💻 POWERSHELL -->
+      <div class="sec" id="sec-shell">
+        <div class="sec-h open" onclick="toggleSec('shell')"><span>💻</span><span class="title">PowerShell Command</span><span class="chev">▾</span></div>
+        <div id="sec-shell-b" class="sec-b">
+          <div style="background:var(--red-d);border:1px solid rgba(239,68,68,.3);border-radius:6px;padding:8px 12px;font-size:11px;color:#fca5a5;margin-bottom:10px">
+            ⚠️ Commands run as <strong>SYSTEM</strong> on this device and are audit-logged.
+          </div>
+          <textarea id="sh-in" rows="3" placeholder="Get-ComputerInfo | Select-Object WindowsProductName,TotalPhysicalMemory"></textarea>
+          <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:8px">
+            <button class="bg bsm" onclick="document.getElementById('sh-out').innerHTML='';document.getElementById('sh-status').textContent=''">Clear</button>
+            <button class="bp bsm" id="sh-run" onclick="shellRun()">▶ Run</button>
+          </div>
+          <div id="sh-status" style="font-size:11px;color:var(--muted);margin-top:4px"></div>
           <pre class="sh-out" id="sh-out"></pre>
         </div>
       </div>
-    </div>
 
-    <!-- AUDIT -->
+      <!-- 📜 COMMAND HISTORY -->
+      <div class="sec" id="sec-hist">
+        <div class="sec-h open" onclick="toggleSec('hist')"><span>📜</span><span class="title">Command History</span><span class="chev">▾</span></div>
+        <div id="sec-hist-b" class="sec-b pad0">
+          <table class="tbl">
+            <thead><tr><th>#</th><th>Type</th><th>Status</th><th>Created</th><th>Duration</th><th style="text-align:right">Result</th></tr></thead>
+            <tbody id="hist-tbody"><tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px">No commands yet</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div><!-- /page-device -->
+
+    <!-- AUDIT PAGE -->
     <div id="page-audit" class="page">
-      <div class="phead"><h1>Audit Log</h1><div class="sp"></div>
-        <button class="btn-ghost btn-sm" onclick="loadAudit()">↻ Refresh</button></div>
-      <div class="card"><div id="audit-list"><div class="empty">Loading…</div></div></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+        <h2 style="font-size:16px;font-weight:700">📋 Audit Log</h2>
+        <div style="flex:1"></div>
+        <button class="bg bsm" onclick="loadAudit()">↻</button>
+        <button class="bg bsm" onclick="clearDevice()">✕ Close</button>
+      </div>
+      <div class="sec"><div class="sec-b pad0"><table class="tbl">
+        <thead><tr><th>Time</th><th>Action</th><th>Details</th></tr></thead>
+        <tbody id="audit-tbody"><tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">Loading…</td></tr></tbody>
+      </table></div></div>
     </div>
 
+  </div><!-- /main -->
+</div><!-- /layout -->
+</div><!-- /app -->
+
+<!-- CONFIRM MODAL -->
+<div id="confirm-modal">
+  <div class="cm">
+    <h2 id="cm-title"></h2>
+    <div class="msg" id="cm-msg"></div>
+    <div class="acts">
+      <button class="bg" onclick="closeConfirm()">Cancel</button>
+      <button id="cm-ok" onclick="doConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<!-- RESULT MODAL -->
+<div id="result-modal">
+  <div class="rm">
+    <div class="rm-h">
+      <h2 id="rm-title"></h2>
+      <div style="display:flex;gap:6px">
+        <button class="bg bsm" onclick="copyResult()">📋 Copy</button>
+        <button class="bg bsm" onclick="closeResult()">✕</button>
+      </div>
+    </div>
+    <div class="rm-meta" id="rm-meta"></div>
+    <pre class="rm-body" id="rm-body"></pre>
   </div>
 </div>
 
 <script>
 "use strict";
-let currentDevice=null,currentHost=null,allDevices=[],fbPath="C:\\",invTimer=null;
+const G={
+  devices:[],devId:null,devInfo:{},
+  inv:{},services:null,software:null,startup:null,users:null,
+  fbPath:'C:\\',
+  svcFilter:'all',swFilter:'',
+  invTimer:null,histTimer:null,
+  confirmCb:null,
+};
 
-async function api(method,path,body){
-  const o={method,headers:{'Content-Type':'application/json'}};
-  if(body!==undefined)o.body=JSON.stringify(body);
-  const r=await fetch(path,o);
+/* ── API ── */
+async function api(m,p,b){
+  const o={method:m,headers:{'Content-Type':'application/json'}};
+  if(b!==undefined)o.body=JSON.stringify(b);
+  const r=await fetch(p,o);
   if(r.status===401){showLogin();return null;}
   if(!r.ok)throw new Error(await r.text());
   return r.json();
 }
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function relTime(iso){if(!iso)return'—';const s=Math.round((Date.now()-new Date(iso))/1000);
-  if(s<5)return'just now';if(s<60)return s+'s ago';if(s<3600)return Math.round(s/60)+'m ago';
-  if(s<86400)return Math.round(s/3600)+'h ago';return new Date(iso).toLocaleDateString();}
-function onlineStatus(ls){if(!ls)return'offline';const s=(Date.now()-new Date(ls))/1000;
-  if(s<120)return'online';if(s<1800)return'warning';return'offline';}
 
-/* ---- nav ---- */
+/* ── UTILS ── */
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const relTime=iso=>{if(!iso)return'—';const s=Math.round((Date.now()-new Date(iso))/1000);if(s<5)return'just now';if(s<60)return s+'s ago';if(s<3600)return Math.round(s/60)+'m ago';if(s<86400)return Math.round(s/3600)+'h ago';return new Date(iso).toLocaleDateString();};
+const fmtSize=n=>{if(n==null)return'—';if(n<1024)return n+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';if(n<1073741824)return(n/1048576).toFixed(1)+' MB';return(n/1073741824).toFixed(1)+' GB';};
+const pct=(u,t)=>t>0?Math.round(u/t*100):0;
+const onSt=ls=>{if(!ls)return'off';const s=(Date.now()-new Date(ls))/1000;return s<120?'on':s<1800?'warn':'off';};
+const fillCls=p=>p<70?'u-ok':p<90?'u-warn':'u-bad';
+const ubar=(p,c)=>`<div class="ubar"><div class="ufill ${c||fillCls(p)}" style="width:${Math.min(100,p)}%;background:${c?'currentColor':''};height:4px;border-radius:2px;${c==='u-ok'?'background:var(--green)':c==='u-warn'?'background:var(--yellow)':c==='u-bad'?'background:var(--red)':c==='u-blue'?'background:var(--blue)':c==='u-purple'?'background:var(--purple)':'background:var(--green)'}"></div></div>`;
+
+/* ── AUTH ── */
 function showLogin(){document.getElementById('login-page').style.display='flex';document.getElementById('app').classList.remove('on');}
 function showApp(){document.getElementById('login-page').style.display='none';document.getElementById('app').classList.add('on');}
-function nav(p){
-  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-  document.querySelectorAll('#sidebar .nav').forEach(x=>x.classList.remove('active'));
-  document.getElementById('page-'+p).classList.add('active');
-  document.getElementById('nav-'+p)?.classList.add('active');
-  if(invTimer){clearInterval(invTimer);invTimer=null;}
-  if(p==='devices')loadDevices();
-  if(p==='audit')loadAudit();
-}
-function tab(t){
-  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.t===t));
-  document.querySelectorAll('.tabpage').forEach(x=>x.classList.remove('active'));
-  document.getElementById('tab-'+t).classList.add('active');
-  if(t==='files'&&!document.getElementById('fb-body').innerHTML)fbGo(fbPath);
-}
-
-/* ---- login ---- */
 async function doLogin(){
-  const pw=document.getElementById('login-pw').value;
-  try{const r=await api('POST','/api/login',{password:pw});if(r&&r.ok){showApp();nav('devices');}}
-  catch{const e=document.getElementById('login-err');e.style.display='block';setTimeout(()=>e.style.display='none',2500);}
+  const pw=document.getElementById('lpw').value;
+  try{const r=await api('POST','/api/login',{password:pw});if(r&&r.ok){showApp();initApp();}}
+  catch{const e=document.getElementById('lerr');e.style.display='block';setTimeout(()=>e.style.display='none',2500);}
 }
 async function doLogout(){await api('POST','/api/logout');showLogin();}
 
-/* ---- devices ---- */
+/* ── DEVICES ── */
 async function loadDevices(){
-  try{const {devices}=await api('GET','/api/devices')||{devices:[]};allDevices=devices||[];renderDevices();}
-  catch(e){console.error(e);}
+  try{const r=await api('GET','/api/devices')||{devices:[]};G.devices=r.devices||[];renderList();updateTopbar();}catch(e){console.error(e);}
 }
-function renderDevices(){
+function updateTopbar(){
+  const on=G.devices.filter(d=>onSt(d.last_seen)==='on').length;
+  document.getElementById('dcount').textContent=`(${G.devices.length} · ${on} online)`;
+}
+function renderList(){
   const q=(document.getElementById('dsearch').value||'').toLowerCase();
-  const list=allDevices.filter(d=>(d.hostname||'').toLowerCase().includes(q)||(d.username||'').toLowerCase().includes(q)||(d.last_ip||'').includes(q));
-  const tb=document.getElementById('dtbody');
-  if(!list.length){tb.innerHTML='<tr><td colspan="6"><div class="empty"><div class="i">🖥</div>No devices</div></td></tr>';return;}
-  tb.innerHTML=list.map(d=>{const st=onlineStatus(d.last_seen);
-    return `<tr style="cursor:pointer" onclick="openDevice('${esc(d.device_id)}','${esc(d.hostname||d.device_id)}')">
-      <td><span class="dot dot-${st}"></span>${st}</td>
-      <td><strong>${esc(d.hostname||d.device_id)}</strong></td>
-      <td>${esc(d.username||'—')}</td><td>${esc(d.last_ip||'—')}</td>
-      <td style="max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.os_version||'—')}</td>
-      <td>${relTime(d.last_seen)}</td></tr>`;}).join('');
+  const list=G.devices.filter(d=>(d.hostname||'').toLowerCase().includes(q)||(d.username||'').toLowerCase().includes(q)||(d.last_ip||'').includes(q));
+  const el=document.getElementById('dev-list');
+  el.innerHTML=list.map(d=>{
+    const st=onSt(d.last_seen);
+    return`<div class="ditem${G.devId===d.device_id?' sel':''}" onclick="openDevice('${esc(d.device_id)}')">
+      <div class="ddot ${st}"></div>
+      <div style="min-width:0;flex:1">
+        <div class="dhost">${esc(d.hostname||d.device_id)}</div>
+        <div style="font-size:10px;color:var(--muted2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(d.username||'—')}</div>
+      </div>
+      <div class="dts">${relTime(d.last_seen)}</div>
+    </div>`;
+  }).join('');
 }
 
-/* ---- device detail ---- */
-async function openDevice(id,host){
-  currentDevice=id;currentHost=host;
-  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-  document.getElementById('page-device').classList.add('active');
-  document.getElementById('d-title').textContent=host;
-  document.getElementById('d-host').textContent=host;
-  document.getElementById('fb-body').innerHTML='';fbPath='C:\\';
-  document.getElementById('sh-out').textContent='';document.getElementById('sh-status').textContent='';
-  tab('inv');
-  const dev=allDevices.find(x=>x.device_id===id)||{};
-  renderInfo(dev,id);
-  loadInventory();
-  if(invTimer)clearInterval(invTimer);
-  invTimer=setInterval(loadInventory,15000); // auto-refresh inventory view
+/* ── OPEN DEVICE ── */
+async function openDevice(id){
+  G.devId=id;G.inv={};G.services=null;G.software=null;G.startup=null;G.users=null;
+  const dev=G.devices.find(d=>d.device_id===id)||{};G.devInfo=dev;
+  renderList();
+  document.getElementById('no-dev').style.display='none';
+  document.getElementById('page-audit').classList.remove('on');
+  document.getElementById('page-device').classList.add('on');
+  // render info strip
+  document.getElementById('dh-bc-host').textContent=dev.hostname||id;
+  const strip=[
+    ['Device ID',dev.device_id,'mono'],['Hostname',dev.hostname],
+    ['Username',dev.username],['Domain',dev.domain],
+    ['IP Address',dev.last_ip],['OS',dev.os_version],
+    ['Agent',dev.agent_version],['Last Seen',relTime(dev.last_seen)],
+    ['First Seen',relTime(dev.first_seen)]
+  ];
+  document.getElementById('dh-strip').innerHTML=strip.filter(([,v])=>v).map(([l,v,cls])=>`<div class="dh-card"><div class="dh-label">${l}</div><div class="dh-val ${cls||''}">${esc(String(v))}</div></div>`).join('');
+  // hide dynamic sections
+  ['sec-inv','sec-services','sec-software','sec-startup','sec-users'].forEach(s=>{document.getElementById(s).style.display='none';});
+  document.getElementById('live-stats').style.display='none';
+  document.getElementById('sh-out').innerHTML='';document.getElementById('sh-status').textContent='';
+  document.getElementById('hist-tbody').innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">Loading…</td></tr>';
+  // load inventory from server
+  await loadInventory();
+  await loadHistory();
+  // refresh timers
+  if(G.invTimer)clearInterval(G.invTimer);
+  if(G.histTimer)clearInterval(G.histTimer);
+  G.invTimer=setInterval(loadInventory,15000);
+  G.histTimer=setInterval(loadHistory,8000);
 }
-function renderInfo(dev,id){
-  document.getElementById('d-dot').className='dot dot-'+onlineStatus(dev.last_seen);
-  const f=[['Hostname',dev.hostname||'—'],['User',dev.username||'—'],['Domain',dev.domain||'—'],
-    ['IP',dev.last_ip||'—'],['Agent',dev.agent_version||'—'],['Last Seen',dev.last_seen?relTime(dev.last_seen):'—']];
-  document.getElementById('d-info').innerHTML=f.map(([l,v])=>`<div class="info-item"><div class="l">${l}</div><div class="v">${esc(v)}</div></div>`).join('');
+function clearDevice(){
+  G.devId=null;
+  document.getElementById('no-dev').style.display='flex';
+  document.getElementById('page-device').classList.remove('on');
+  document.getElementById('page-audit').classList.remove('on');
+  if(G.invTimer)clearInterval(G.invTimer);if(G.histTimer)clearInterval(G.histTimer);
+  renderList();
 }
 
-/* ---- inventory ---- */
+/* ── INVENTORY ── */
 async function loadInventory(){
-  if(!currentDevice)return;
-  try{
-    const {inventory}=await api('GET',`/api/devices/${currentDevice}/inventory`)||{inventory:{}};
-    renderInventory(inventory||{});
-  }catch(e){console.error(e);}
+  if(!G.devId)return;
+  try{const r=await api('GET',`/api/devices/${G.devId}/inventory`)||{};G.inv=r.inventory||{};}catch{}
+  renderInventory();
 }
-function invCard(title,icon,updated,inner){
-  return `<div class="inv-card"><div class="h">${icon} ${title}<span class="u">${updated?relTime(updated):'—'}</span></div><div class="b">${inner}</div></div>`;
+function renderInventory(){
+  const kinds=Object.keys(G.inv);if(!kinds.length)return;
+  document.getElementById('sec-inv').style.display='';
+  const grid=document.getElementById('inv-grid');
+  grid.innerHTML='';
+  // sysinfo card
+  const si=G.inv.sysinfo?.data;
+  if(si){
+    // update live stats bar
+    const ram=pct(si.ram_total_gb-si.ram_free_gb,si.ram_total_gb);
+    const disk=si.disks&&si.disks[0]?pct(si.disks[0].used_gb,si.disks[0].total_gb):0;
+    document.getElementById('live-stats').style.display='';
+    document.getElementById('stat-row').innerHTML=`
+      <div class="stat-c"><div class="sl">💾 RAM</div><div class="sv" style="color:${ram>85?'var(--red)':ram>70?'var(--yellow)':'var(--green)'}">${ram}%</div><div class="ss">${(si.ram_total_gb-si.ram_free_gb).toFixed(1)} / ${si.ram_total_gb} GB</div>${ubar(ram)}</div>
+      <div class="stat-c"><div class="sl">💿 Disk C:</div><div class="sv" style="color:${disk>85?'var(--red)':disk>70?'var(--yellow)':'var(--green)'}">${disk}%</div><div class="ss">${si.disks?si.disks[0].used_gb+' / '+si.disks[0].total_gb+' GB':''}</div>${ubar(disk)}</div>
+      <div class="stat-c"><div class="sl">⏱ Uptime</div><div class="sv">${si.uptime_hours}h</div><div class="ss">Boot: ${si.last_boot||'—'}</div></div>
+      <div class="stat-c"><div class="sl">🖥 OS Build</div><div class="sv" style="font-size:14px">${si.build||'—'}</div><div class="ss">${si.timezone||''}</div></div>`;
+    // sysinfo card
+    const d=si.disks||[];
+    grid.innerHTML+=invCard('🖥 System Info',G.inv.sysinfo.updated_at,`
+      ${kv('OS',si.os)}${kv('CPU',si.cpu)}${kv('RAM',`${(si.ram_total_gb-si.ram_free_gb).toFixed(1)}/${si.ram_total_gb} GB (${ram}%) ${ubar(ram)}`)}
+      ${d.map(dk=>`<div class="kv"><span class="kk">Disk ${esc(dk.drive)}:</span><span class="val">${dk.used_gb}/${dk.total_gb} GB ${ubar(pct(dk.used_gb,dk.total_gb))}</span></div>`).join('')}
+      ${kv('Serial',si.bios_serial)}${kv('Last Boot',si.last_boot)}
+      ${(si.ip_addresses||[]).map((ip,i)=>`<div class="kv"><span class="kk">${i===0?'IP':''}  </span><span class="val mono">${esc(ip)}</span></div>`).join('')}`);
+  }
+  // netinfo
+  const ni=G.inv.netinfo?.data;
+  if(ni){
+    const adapters=(ni.adapters||[]).map(a=>`<div class="kv"><span class="kk">${esc(a.name)}</span><span class="val mono">${esc(a.ip||'—')}/${esc(a.prefix||'')} <span style="color:var(--muted2)">${esc(a.mac||'')}</span></span></div>`).join('');
+    grid.innerHTML+=invCard('🌐 Network',G.inv.netinfo.updated_at,
+      `${kv('Gateway',`<span class="mono">${esc(ni.default_gateway||'—')}</span>`)}${kv('DNS',`<span class="mono">${[].concat(ni.dns_servers||[]).join(', ')}</span>`)}${adapters}
+      <div class="kv"><span class="kk">Connections</span><span class="val"><span class="bdg bdg-b">${(ni.established_connections||[]).length} established</span></span></div>`);
+  }
+  // defender
+  const def=G.inv.defender?.data;
+  if(def){
+    const ok=def.am_enabled&&def.realtime_enabled&&(def.threats_detected||[]).length===0;
+    grid.innerHTML+=invCard('🛡 Defender',G.inv.defender.updated_at,
+      `<div style="text-align:center;padding:6px 0"><span class="bdg ${ok?'bdg-g':'bdg-r'}" style="font-size:13px;padding:4px 14px">${ok?'✅ PROTECTED':'⚠️ CHECK REQUIRED'}</span></div>
+      ${kv('AM Service',`<span class="bdg ${def.am_enabled?'bdg-g':'bdg-r'}">${def.am_enabled?'Enabled':'Disabled'}</span>`)}
+      ${kv('Real-time',`<span class="bdg ${def.realtime_enabled?'bdg-g':'bdg-r'}">${def.realtime_enabled?'On':'Off'}</span>`)}
+      ${kv('Sig Version',def.av_signature_version||'—')}${kv('Sig Age',def.av_signature_age_days+'d')}
+      ${kv('Threats',`<span class="bdg ${(def.threats_detected||[]).length?'bdg-r':'bdg-g'}">${(def.threats_detected||[]).length}</span>`)}`);
+  }
+  // updates
+  const upd=G.inv.updates?.data;
+  if(upd){
+    grid.innerHTML+=invCard('⬆ Updates',G.inv.updates.updated_at,
+      `${kv('Pending',`<span class="bdg ${upd.pending_count?'bdg-y':'bdg-g'}">${upd.pending_count} update(s)</span>`)}
+      ${(upd.pending_updates||[]).slice(0,4).map(u=>`<div style="font-size:11px;color:var(--muted);padding:2px 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(u)}</div>`).join('')}`);
+  }
+  // processes
+  const pr=G.inv.processes?.data;
+  if(pr){
+    const top5=[...(pr.top30_by_cpu||[])].sort((a,b)=>b.mem_mb-a.mem_mb).slice(0,6);
+    grid.innerHTML+=invCard('⚙ Processes',G.inv.processes.updated_at,
+      `${kv('Total',`<span class="bdg bdg-b">${pr.count}</span>`)}
+      <table class="tbl" style="margin-top:6px"><thead><tr><th>Process</th><th>PID</th><th>RAM</th><th>Action</th></tr></thead><tbody>
+      ${top5.map(p=>`<tr><td class="mono">${esc(p.name)}</td><td class="mono" style="color:var(--muted)">${p.pid}</td>
+        <td>${(p.mem_mb/1024>0.1?(p.mem_mb/1024).toFixed(1)+' GB':p.mem_mb.toFixed(0)+' MB')}</td>
+        <td><button class="bxs br" onclick="killProc(${p.pid},'${esc(p.name)}')">Kill</button></td></tr>`).join('')}
+      </tbody></table>`);
+  }
+  // eventlog
+  const ev=G.inv.eventlog?.data;
+  if(ev){
+    const errs=(ev.events||[]).filter(e=>['Critical','Error'].includes(e.level));
+    const warns=(ev.events||[]).filter(e=>e.level==='Warning');
+    grid.innerHTML+=invCard('📋 Events (24h)',G.inv.eventlog.updated_at,
+      `${kv('Total',`<span class="bdg bdg-gray">${ev.count}</span>`)}
+      ${kv('Errors',`<span class="bdg ${errs.length?'bdg-r':'bdg-g'}">${errs.length}</span>`)}
+      ${kv('Warnings',`<span class="bdg ${warns.length?'bdg-y':'bdg-g'}">${warns.length}</span>`)}
+      <div style="margin-top:6px;max-height:120px;overflow-y:auto">
+      ${errs.slice(0,5).map(e=>`<div style="display:flex;gap:6px;padding:3px 0;font-size:11px;border-bottom:1px solid var(--border)">
+        <span style="color:var(--red);flex-shrink:0">●</span>
+        <span style="color:var(--muted);flex-shrink:0">${esc(e.time||'')}</span>
+        <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)">${esc(e.source)}: ${esc(e.message||'')}</span>
+      </div>`).join('')}
+      </div>`);
+  }
+  // printers
+  const ptr=G.inv.printers?.data;
+  if(ptr&&ptr.printers&&ptr.printers.length){
+    grid.innerHTML+=invCard('🖨 Printers',G.inv.printers.updated_at,
+      ptr.printers.map(p=>`<div class="kv"><span class="kk">${p.default?'✅ ':'🖨 '}${esc(p.name)}</span><span class="val"><span class="bdg bdg-gray">${esc(String(p.status||''))}</span></span></div>`).join(''));
+  }
+  document.getElementById('inv-upd').textContent=`Last updated: ${new Date().toLocaleTimeString()}`;
 }
-function kv(k,v){return `<div class="kv"><span class="k">${k}</span><span class="v">${esc(v)}</span></div>`;}
-function rawBlock(obj){return `<details class="raw"><summary>raw JSON</summary><pre>${esc(JSON.stringify(obj,null,2))}</pre></details>`;}
-function pick(o,keys){let s='';for(const k of keys){if(o&&o[k.k]!==undefined&&o[k.k]!==null&&o[k.k]!=='')s+=kv(k.l,o[k.k]);}return s;}
+function invCard(title,upd,inner){
+  return`<div class="inv-card"><div class="inv-ch"><span class="ct">${title}</span><span class="cu">${upd?relTime(upd):''}</span></div><div class="inv-cb">${inner}</div></div>`;
+}
+function kv(k,v){return`<div class="kv"><span class="kk">${esc(k)}</span><span class="val">${typeof v==='string'&&(v.startsWith('<')||v.includes('ubar'))?v:esc(String(v??'—'))}</span></div>`;}
 
-function renderInventory(inv){
-  const order=['sysinfo','netinfo','defender','updates','printers','processes','wifi','eventlog'];
-  const meta={
-    sysinfo:['System','🖥'],netinfo:['Network','🌐'],defender:['Defender','🛡'],updates:['Windows Update','⬆'],
-    printers:['Printers','🖨'],processes:['Processes','⚙'],wifi:['Wi-Fi','📶'],eventlog:['Event Log (24h)','📋']
+/* ── SYSTEM CONTROL ── */
+function ctrlAction(id,title,msg,script){
+  const dev=G.devInfo.hostname||'this device';
+  document.getElementById('cm-title').textContent=title;
+  document.getElementById('cm-msg').textContent=msg.replace('DEVICE',dev);
+  const okBtn=document.getElementById('cm-ok');
+  okBtn.className=(['restart','shutdown','logoff'].includes(id)?'br bp':'bp')+' bsm';
+  okBtn.textContent=title;
+  G.confirmCb=async()=>{
+    closeConfirm();
+    await runShell(script,title);
   };
-  const wrap=document.getElementById('inv-wrap');
-  const kinds=order.filter(k=>inv[k]);
-  if(!kinds.length){wrap.innerHTML='<div class="empty"><div class="i">📊</div>No inventory yet — click “Collect Now”, or wait for the agent’s next report.</div>';return;}
-  let html='<div class="inv-grid">';
-  for(const k of kinds){
-    const rec=inv[k];const d=rec.data;const[title,icon]=meta[k]||[k,'•'];let inner='';
-    try{
-      if(k==='sysinfo'&&d){inner=pick(d,[{k:'os',l:'OS'},{k:'cpu',l:'CPU'},{k:'ram_total_gb',l:'RAM (GB)'},{k:'ram_free_gb',l:'RAM free (GB)'},{k:'uptime_hours',l:'Uptime (h)'},{k:'last_boot',l:'Last boot'},{k:'bios_serial',l:'Serial'},{k:'timezone',l:'Timezone'}]);
-        if(d.disks&&d.disks.length){inner+='<div class="kv"><span class="k">Disks</span><span class="v">'+d.disks.map(x=>`${x.drive}: ${x.free_gb}/${x.total_gb} GB free`).join('<br>')+'</span></div>';}
-        inner+=rawBlock(d);}
-      else if(k==='netinfo'&&d){inner=kv('Gateway',d.default_gateway||'—');
-        if(d.dns_servers)inner+=kv('DNS',[].concat(d.dns_servers).join(', '));
-        if(d.adapters&&d.adapters.length)inner+='<div class="kv"><span class="k">Adapters</span><span class="v">'+d.adapters.map(a=>`${esc(a.name)}: ${esc(a.ip||'—')}`).join('<br>')+'</span></div>';
-        inner+=rawBlock(d);}
-      else if(k==='defender'&&d){inner=pick(d,[{k:'realtime_enabled',l:'Realtime'},{k:'am_enabled',l:'AM service'},{k:'av_signature_version',l:'Sig version'},{k:'av_signature_age_days',l:'Sig age (d)'},{k:'last_quick_scan',l:'Last quick scan'},{k:'engine_version',l:'Engine'}]);
-        const th=(d.threats_detected||[]);inner+=kv('Threats',th.length?th.length+' detected':'none');inner+=rawBlock(d);}
-      else if(k==='updates'&&d){inner=kv('Pending updates',(d.pending_count!=null?d.pending_count:'—'));
-        if(d.pending_updates&&d.pending_updates.length)inner+='<div class="kv"><span class="k">Pending</span><span class="v">'+d.pending_updates.slice(0,5).map(esc).join('<br>')+'</span></div>';
-        inner+=rawBlock(d);}
-      else if(k==='printers'&&d){inner=kv('Count',d.count!=null?d.count:'—');
-        if(d.printers&&d.printers.length)inner+='<div class="kv"><span class="k">Printers</span><span class="v">'+d.printers.map(p=>esc(p.name)).join('<br>')+'</span></div>';
-        inner+=rawBlock(d);}
-      else if(k==='processes'&&d){inner=kv('Total',d.count!=null?d.count:'—');
-        if(d.top30_by_cpu&&d.top30_by_cpu.length){inner+='<table class="mini-table">'+d.top30_by_cpu.slice(0,8).map(p=>`<tr><td>${esc(p.name)}</td><td>${esc(p.mem_mb)} MB</td></tr>`).join('')+'</table>';}
-        inner+=rawBlock(d);}
-      else if(k==='eventlog'&&d){inner=kv('Errors/Warnings (24h)',d.count!=null?d.count:'—');
-        if(d.events&&d.events.length){inner+='<table class="mini-table">'+d.events.slice(0,6).map(e=>`<tr><td>${esc(e.level)}</td><td>${esc(e.source)}</td></tr>`).join('')+'</table>';}
-        inner+=rawBlock(d);}
-      else if(k==='wifi'){inner='<div class="kv"><span class="v" style="color:var(--muted)">netsh output</span></div>'+`<details class="raw"><summary>show output</summary><pre>${esc(typeof d==='string'?d:JSON.stringify(d,null,2))}</pre></details>`;}
-      else{inner=rawBlock(d);}
-    }catch(e){inner=rawBlock(d);}
-    html+=invCard(title,icon,rec.updated_at,inner);
-  }
-  html+='</div>';
-  wrap.innerHTML=html;
+  document.getElementById('confirm-modal').classList.add('open');
+}
+function closeConfirm(){document.getElementById('confirm-modal').classList.remove('open');G.confirmCb=null;}
+async function doConfirm(){if(G.confirmCb)G.confirmCb();}
+
+/* ── KILL PROCESS ── */
+async function killProc(pid,name){
+  if(!confirm(`Kill process "${name}" (PID ${pid}) on ${G.devInfo.hostname||'this device'}?`))return;
+  await runShell(`Stop-Process -Id ${pid} -Force -EA SilentlyContinue; Write-Host "Killed PID ${pid} (${name})"`,`Kill ${name}`);
 }
 
-/* ---- live command runner (auto-queued, long-poll makes it fast) ---- */
-async function runLive(type,payload,onStatus){
-  const {id}=await api('POST','/api/commands',{device_id:currentDevice,cmd_type:type,payload:payload||{},confirm:true});
-  for(let i=0;i<120;i++){
-    await new Promise(r=>setTimeout(r,1000));
-    const res=await api('GET',`/api/commands/${id}/result`);
-    if(!res)throw new Error('auth');
-    if(onStatus)onStatus(res.status);
-    if(['done','failed','timeout'].includes(res.status))return {id,...res};
-  }
-  return {id,status:'timeout',result:'client gave up waiting'};
-}
-
-async function refreshInventory(){
-  const btn=event?.target;if(btn){btn.disabled=true;btn.textContent='⟳ Collecting…';}
+/* ── SERVICES ── */
+let svcData=[];
+async function collectShellData(key,label,script){
+  const btn=document.getElementById('qcb-'+key);
+  if(btn){btn.classList.add('running');btn.textContent='⟳ '+btn.textContent.replace('⟳ ','');}
   try{
-    // queue all read collectors; agent will also push them to inventory store
-    const kinds=['sysinfo','netinfo','defender','updates','printers','processes','wifi','eventlog'];
-    await Promise.all(kinds.map(k=>api('POST','/api/commands',{device_id:currentDevice,cmd_type:k,payload:{},confirm:true})));
-    // give the agent a couple long-poll cycles, then reload
-    setTimeout(loadInventory,4000);setTimeout(loadInventory,9000);
+    const r=await runLive('shell',{script},120);
+    let data=[];try{data=JSON.parse(r.result||'[]');}catch{}
+    if(!Array.isArray(data))data=[data];
+    if(key==='services'){svcData=data;document.getElementById('sec-services').style.display='';document.getElementById('svc-count').textContent=data.length;renderServices();}
+    else if(key==='software'){G.software=data;document.getElementById('sec-software').style.display='';document.getElementById('sw-count').textContent=data.length+' apps';renderSoftware();}
+    else if(key==='startup'){G.startup=data;document.getElementById('sec-startup').style.display='';document.getElementById('startup-tbody').innerHTML=data.map(s=>`<tr><td>${esc(s.Name||'')}</td><td class="mono" style="font-size:10px;max-width:200px;overflow:hidden;text-overflow:ellipsis">${esc(s.Command||'')}</td><td>${esc(s.Location||'')}</td><td>${esc(s.User||'')}</td></tr>`).join('');}
+    else if(key==='users'){G.users=data;document.getElementById('sec-users').style.display='';document.getElementById('users-tbody').innerHTML=data.map(u=>`<tr><td style="font-weight:600">${esc(u.Name||'')}</td><td><span class="bdg ${u.Enabled?'bdg-g':'bdg-gray'}">${u.Enabled?'Enabled':'Disabled'}</span></td><td style="color:var(--muted)">${u.LastLogon?new Date(u.LastLogon).toLocaleString():'Never'}</td><td style="color:var(--muted)">${esc(u.Description||'')}</td></tr>`).join('');}
+    else if(key==='diskhealth'){showResult(label,r.result,'Disk Health Results');}
+    else if(key==='ping'){showResult(label,r.result,'Ping Results');}
   }catch(e){alert('Error: '+e.message);}
-  finally{if(btn){setTimeout(()=>{btn.disabled=false;btn.textContent='⟳ Collect Now';},4000);}}
+  finally{if(btn){btn.classList.remove('running');btn.textContent=btn.textContent.replace('⟳ ','');}}
+}
+let svcFilterVal='all';
+function svcFilter(v){svcFilterVal=v;['all','running','stopped'].forEach(f=>{document.getElementById('sf-'+f).classList.toggle('act',f===v);});renderServices();}
+function renderServices(){
+  const q=(document.getElementById('svc-filter')?.value||'').toLowerCase();
+  let list=svcData;
+  if(svcFilterVal==='running')list=list.filter(s=>(s.Status||'').toLowerCase().includes('running'));
+  if(svcFilterVal==='stopped')list=list.filter(s=>!(s.Status||'').toLowerCase().includes('running'));
+  if(q)list=list.filter(s=>(s.DisplayName||s.Name||'').toLowerCase().includes(q));
+  document.getElementById('svc-tbody').innerHTML=list.map(s=>{
+    const running=(s.Status||'').toLowerCase().includes('running');
+    return`<tr><td style="font-weight:500">${esc(s.DisplayName||s.Name||'')}</td>
+      <td><span class="bdg ${running?'bdg-g':'bdg-gray'}">${esc(s.Status||'')}</span></td>
+      <td style="color:var(--muted)">${esc(s.StartType||'')}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="bxs bg" onclick="svcAction('${esc(s.Name)}','Start')" ${running?'disabled':''}>Start</button>
+        <button class="bxs bg" onclick="svcAction('${esc(s.Name)}','Stop')" ${!running?'disabled':''}>Stop</button>
+        <button class="bxs bg" onclick="svcAction('${esc(s.Name)}','Restart')">Restart</button>
+      </td></tr>`;
+  }).join('');
+}
+async function svcAction(name,action){
+  await runShell(`${action}-Service -Name '${name}' -Force -EA SilentlyContinue; Get-Service -Name '${name}'|Select-Object Name,Status|ConvertTo-Json`,`${action} service: ${name}`);
+  await collectShellData('services','⚙ Services','Get-Service|Sort-Object Status,DisplayName|Select-Object Name,DisplayName,Status,StartType|ConvertTo-Json -Depth 2');
 }
 
-/* ---- file browser ---- */
-function normPath(p){p=(p||'').trim();if(!p)p='C:\\';return p;}
-function fbUp(){
-  let p=fbPath.replace(/[\\/]+$/,'');
-  const i=Math.max(p.lastIndexOf('\\'),p.lastIndexOf('/'));
-  if(i>2)p=p.slice(0,i);else if(i===2)p=p.slice(0,3);
-  fbGo(p);
+/* ── SOFTWARE ── */
+function renderSoftware(){
+  const q=(document.getElementById('sw-filter')?.value||'').toLowerCase();
+  let list=G.software||[];
+  if(q)list=list.filter(s=>(s.DisplayName||'').toLowerCase().includes(q)||(s.Publisher||'').toLowerCase().includes(q));
+  document.getElementById('sw-tbody').innerHTML=list.map(s=>`<tr>
+    <td style="font-weight:500">${esc(s.DisplayName||'')}</td>
+    <td class="mono">${esc(s.DisplayVersion||'—')}</td>
+    <td style="color:var(--muted)">${esc(s.Publisher||'—')}</td>
+  </tr>`).join('');
 }
+
+/* ── COLLECTORS ── */
+async function collect(kind){
+  const btn=document.getElementById('qcb-'+kind);
+  if(btn){btn.classList.add('running');btn.textContent='⟳ '+btn.textContent.replace('⟳ ','');}
+  try{await api('POST','/api/commands',{device_id:G.devId,cmd_type:kind,payload:{},confirm:true});}catch{}
+  setTimeout(async()=>{await loadInventory();if(btn){btn.classList.remove('running');btn.textContent=btn.textContent.replace('⟳ ','');}},4000);
+}
+async function collectAll(){
+  const btn=document.getElementById('qcb-all');if(btn){btn.disabled=true;btn.textContent='⟳ Collecting…';}
+  const kinds=['sysinfo','netinfo','processes','defender','updates','eventlog','printers','wifi'];
+  await Promise.all(kinds.map(k=>api('POST','/api/commands',{device_id:G.devId,cmd_type:k,payload:{},confirm:true}).catch(()=>{})));
+  await collectShellData('services','⚙ Services','Get-Service|Sort-Object Status,DisplayName|Select-Object Name,DisplayName,Status,StartType|ConvertTo-Json -Depth 2');
+  setTimeout(async()=>{await loadInventory();if(btn){btn.disabled=false;btn.textContent='⚡ Collect All';}},6000);
+}
+async function pingTarget(){
+  const target=prompt('Ping target (hostname or IP):');if(!target)return;
+  await collectShellData('ping','📡 Ping',`Test-Connection -ComputerName '${target}' -Count 5 -EA SilentlyContinue|Format-Table -AutoSize|Out-String`);
+}
+
+/* ── FILE BROWSER ── */
+const fbIco=n=>{const e=(n.split('.').pop()||'').toLowerCase();return({exe:'⚙',dll:'🔧',ps1:'📜',bat:'📜',txt:'📄',log:'📄',csv:'📊',xlsx:'📊',docx:'📝',pdf:'📕',zip:'🗜',rar:'🗜',jpg:'🖼',png:'🖼',mp4:'🎬',json:'📋',xml:'📋',ini:'⚙'}[e]||'📄');};
 function fbCrumb(){
-  const parts=fbPath.replace(/[\\/]+$/,'').split('\\');let acc='';
-  document.getElementById('fb-crumb').innerHTML=parts.map((seg,i)=>{
-    acc+=(i?'\\':'')+seg;const target=acc+(i===0?'\\':'');
-    return `<a onclick="fbGo('${esc(target.replace(/\\/g,'\\\\'))}')">${esc(seg||'\\')}</a>`;
-  }).join('<span>\\</span>');
+  const parts=G.fbPath.replace(/[\\\/]+$/,'').split('\\');let acc='';
+  document.getElementById('fb-crumb').innerHTML='<span onclick="fbGo(\'C:\\\\\')" style="cursor:pointer;color:var(--blue)">📁 </span>'+parts.map((s,i)=>{acc+=(i?'\\':'')+s;const t=acc+(i===0?'\\':'');return`<a onclick="fbGo('${esc(t.replace(/\\/g,'\\\\'))}')">${esc(s||'\\')}</a>`;}).join('<span> \\ </span>');
 }
+function fbUp(){let p=G.fbPath.replace(/[\\\/]+$/,'');const i=Math.max(p.lastIndexOf('\\'),p.lastIndexOf('/'));if(i>2)p=p.slice(0,i);else if(i===2)p=p.slice(0,3);fbGo(p);}
 async function fbGo(path){
-  fbPath=normPath(path);
-  document.getElementById('fb-path').value=fbPath;
-  fbCrumb();
-  const body=document.getElementById('fb-body');
-  const st=document.getElementById('fb-status');
-  body.innerHTML='';st.innerHTML='<span class="spinner"></span> Listing…';
+  G.fbPath=(path||'C:\\').trim();
+  document.getElementById('fb-in').value=G.fbPath;fbCrumb();
+  const st=document.getElementById('fb-status');const bd=document.getElementById('fb-body');
+  st.innerHTML='<span class="spin"></span> Listing…';bd.innerHTML='';
   try{
-    const r=await runLive('listdir',{path:fbPath});
-    st.textContent='';
+    const r=await runLive('listdir',{path:G.fbPath},3);
     let data={};try{data=JSON.parse(r.result||'{}');}catch{data={error:r.result};}
     if(data.error){st.innerHTML=`<span style="color:var(--red)">${esc(data.error)}</span>`;return;}
-    const items=(data.items||[]).sort((a,b)=>(a.type===b.type)?a.name.localeCompare(b.name):(a.type==='dir'?-1:1));
-    if(!items.length){body.innerHTML='<tr><td class="empty" style="padding:24px">(empty folder)</td></tr>';return;}
-    body.innerHTML=items.map(it=>{
-      const full=(fbPath.replace(/[\\/]+$/,''))+'\\'+it.name;
+    const items=(data.items||[]).sort((a,b)=>a.type===b.type?a.name.localeCompare(b.name):a.type==='dir'?-1:1);
+    st.textContent=`${data.count} items`;
+    if(!items.length){bd.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px">(empty folder)</div>';return;}
+    bd.innerHTML=`<table class="tbl"><thead><tr><th>Name</th><th>Type</th><th>Size</th><th>Modified</th><th style="text-align:right">Actions</th></tr></thead><tbody>
+    ${items.map(it=>{
+      const full=G.fbPath.replace(/[\\\/]+$/,'')+'\\'+it.name;
       const fe=esc(full.replace(/\\/g,'\\\\'));
-      if(it.type==='dir'){
-        return `<tr class="fb-row-dir" onclick="fbGo('${fe}')"><td class="fb-name">📁 ${esc(it.name)}</td><td style="color:var(--muted)">—</td><td style="color:var(--muted)">${esc(it.modified)}</td><td class="fb-actions"></td></tr>`;
-      }
-      const sz=it.size!=null?fmtSize(it.size):'';
-      return `<tr><td class="fb-name">📄 ${esc(it.name)}</td><td style="color:var(--muted)">${sz}</td><td style="color:var(--muted)">${esc(it.modified)}</td>
-        <td class="fb-actions">
-          <button class="btn-ghost btn-sm" onclick="fbRead('${fe}')">Read</button>
-          <button class="btn-ghost btn-sm" onclick="fbDownload('${fe}')">⬇</button>
-        </td></tr>`;
-    }).join('');
+      const ico=it.type==='dir'?'📁':fbIco(it.name);
+      return`<tr class="${it.type==='dir'?'fb-row-dir':''}" ${it.type==='dir'?`onclick="fbGo('${fe}')"`:''}><td>
+        <span>${ico}</span> <span style="font-family:var(--mono);font-size:12px">${esc(it.name)}</span></td>
+        <td><span class="bdg bdg-gray">${it.type}</span></td>
+        <td style="color:var(--muted);font-family:var(--mono);font-size:11px">${it.type==='file'?fmtSize(it.size):'—'}</td>
+        <td style="color:var(--muted);font-family:var(--mono);font-size:11px;white-space:nowrap">${esc(it.modified||'')}</td>
+        <td style="text-align:right;white-space:nowrap">${it.type==='file'?`
+          <button class="bxs bg" onclick="event.stopPropagation();fbRead('${fe}')">📄 Read</button>
+          <button class="bxs bg" onclick="event.stopPropagation();fbDl('${fe}')">⬇ Download</button>`:''}</td>
+      </tr>`;}).join('')}
+    </tbody></table>`;
   }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
 }
-function fmtSize(n){if(n<1024)return n+' B';if(n<1048576)return (n/1024).toFixed(1)+' KB';return (n/1048576).toFixed(1)+' MB';}
-
 async function fbRead(path){
-  const st=document.getElementById('fb-status');
-  st.innerHTML='<span class="spinner"></span> Reading…';
-  try{
-    const r=await runLive('readfile',{path});
-    st.textContent='';
-    let data={};try{data=JSON.parse(r.result||'{}');}catch{data={content:r.result};}
-    if(data.error){showModal('Read error',`<pre class="sh-out">${esc(data.error)}</pre>`);return;}
-    showModal('📄 '+path.split('\\').pop(),`<pre class="sh-out" style="max-height:70vh">${esc(data.content||'(empty)')}</pre>`);
-  }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
+  const r=await runLive('readfile',{path},3);
+  let d={};try{d=JSON.parse(r.result||'{}');}catch{d={content:r.result};}
+  if(d.error){showResult('Read Error',d.error,'',true);return;}
+  showResult('📄 '+path.split('\\').pop(),d.content||'(empty)',`Path: ${path} | Size: ${fmtSize(d.size)}`);
 }
-async function fbDownload(path){
+async function fbDl(path){
   const st=document.getElementById('fb-status');
-  st.innerHTML='<span class="spinner"></span> Requesting file…';
-  try{
-    const r=await runLive('getfile',{path});
-    st.textContent='';
-    let data={};try{data=JSON.parse(r.result||'{}');}catch{data={error:r.result};}
-    if(data.error){showModal('Download refused',`<pre class="sh-out">${esc(data.error)}</pre>`);return;}
-    // file present -> trigger browser download of the stored result
-    const a=document.createElement('a');a.href=`/api/commands/${r.id}/download`;a.download='';
-    document.body.appendChild(a);a.click();a.remove();
-    st.innerHTML=`<span style="color:var(--green)">Downloaded ${esc(path.split('\\').pop())} (${fmtSize(data.size||0)})</span>`;
-  }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
+  st.innerHTML='<span class="spin"></span> Requesting download…';
+  const r=await runLive('getfile',{path},10);
+  let d={};try{d=JSON.parse(r.result||'{}');}catch{d={error:r.result};}
+  if(d.error){showResult('Download Refused',d.error,'',true);st.textContent='';return;}
+  const a=document.createElement('a');a.href=`/api/commands/${r.id}/download`;a.download='';
+  document.body.appendChild(a);a.click();a.remove();
+  st.innerHTML=`<span style="color:var(--green)">✅ Downloaded: ${esc(path.split('\\').pop())} (${fmtSize(d.size||0)})</span>`;
 }
 
-/* ---- shell ---- */
+/* ── SHELL ── */
 async function shellRun(){
-  const script=document.getElementById('sh-input').value.trim();
-  if(!script)return;
-  const btn=document.getElementById('sh-run');btn.disabled=true;
-  const st=document.getElementById('sh-status');const out=document.getElementById('sh-out');
-  st.innerHTML='<span class="spinner"></span> Running on '+esc(currentHost)+'…';
+  const script=document.getElementById('sh-in').value.trim();if(!script)return;
+  await runShell(script,'PowerShell');
+}
+async function runShell(script,label){
+  const btn=document.getElementById('sh-run');if(btn)btn.disabled=true;
+  const out=document.getElementById('sh-out');const st=document.getElementById('sh-status');
+  if(out){out.innerHTML+=`<span class="sy">## ${esc(label)} ##\n</span>`;}
+  if(st)st.innerHTML='<span class="spin"></span> Running on '+esc(G.devInfo.hostname||'device')+'…';
   try{
-    const r=await runLive('shell',{script},s=>{st.innerHTML='<span class="spinner"></span> '+esc(s)+'…';});
-    st.textContent='Status: '+r.status+(r.exit_code!=null?(' · exit '+r.exit_code):'');
-    out.textContent=r.result||'(no output)';
-  }catch(e){st.innerHTML=`<span style="color:var(--red)">${esc(e.message)}</span>`;}
-  finally{btn.disabled=false;}
+    const r=await runLive('shell',{script:script},300);
+    if(out){out.innerHTML+=esc(r.result||'(no output)')+'\n\n';out.scrollTop=out.scrollHeight;}
+    if(st)st.textContent=`Done · Exit ${r.exit_code??0} · ${relTime(r.completed_at)}`;
+    await loadHistory();
+  }catch(e){
+    if(out){out.innerHTML+=`<span class="er">ERROR: ${esc(e.message)}</span>\n\n`;}
+    if(st)st.textContent='Error: '+e.message;
+  }
+  if(btn)btn.disabled=false;
 }
 
-/* ---- audit ---- */
-async function loadAudit(){
-  try{const {entries}=await api('GET','/api/audit')||{entries:[]};
-    const el=document.getElementById('audit-list');
-    if(!entries.length){el.innerHTML='<div class="empty">No audit entries</div>';return;}
-    el.innerHTML=entries.map(e=>`<div class="audit"><div class="ts">${new Date(e.ts).toLocaleString()}</div>
-      <div class="ac">${esc(e.action)}</div><div class="de">${esc(JSON.stringify(e.detail))}</div></div>`).join('');
+/* ── HISTORY ── */
+async function loadHistory(){
+  if(!G.devId)return;
+  try{
+    const r=await api('GET',`/api/devices/${G.devId}/commands?limit=30`)||{commands:[]};
+    const cmds=r.commands||[];
+    const labels=r.cmd_labels||{};
+    const el=document.getElementById('hist-tbody');if(!el)return;
+    if(!cmds.length){el.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:16px">No commands</td></tr>';return;}
+    const statusBdg=s=>({pending_confirm:'bdg-y',queued:'bdg-b',running:'bdg-p',done:'bdg-g',failed:'bdg-r',timeout:'bdg-r',cancelled:'bdg-gray'}[s]||'bdg-gray');
+    el.innerHTML=cmds.map(c=>{
+      const dur=c.picked_at&&c.completed_at?Math.round((new Date(c.completed_at)-new Date(c.picked_at))/1000)+'s':'—';
+      const canResult=['done','failed','timeout'].includes(c.status);
+      return`<tr><td style="color:var(--muted);font-family:var(--mono);font-size:11px">#${c.id}</td>
+        <td><span style="font-weight:500;font-size:12px">${esc(labels[c.cmd_type]||c.cmd_type)}</span></td>
+        <td><span class="bdg ${statusBdg(c.status)}">${esc(c.status)}</span></td>
+        <td style="color:var(--muted);font-size:11px">${relTime(c.created_at)}</td>
+        <td style="color:var(--muted);font-size:11px">${dur}</td>
+        <td style="text-align:right">${canResult?`<button class="hist-result-btn" onclick="viewResult(${c.id})">📄 Result</button>`:'—'}</td>
+      </tr>`;
+    }).join('');
   }catch(e){console.error(e);}
 }
-
-/* ---- modal ---- */
-function showModal(title,html){
-  let m=document.getElementById('modal');
-  if(!m){m=document.createElement('div');m.id='modal';
-    m.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center';
-    m.onclick=e=>{if(e.target===m)m.remove();};document.body.appendChild(m);}
-  m.innerHTML=`<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;width:680px;max-width:94vw;max-height:88vh;overflow:auto">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-      <h2 style="font-size:15px">${esc(title)}</h2>
-      <button class="btn-ghost btn-sm" onclick="document.getElementById('modal').remove()">Close</button></div>${html}</div>`;
+async function viewResult(id){
+  const r=await api('GET',`/api/commands/${id}/result`)||{};
+  let txt=r.result||'(no output)';
+  try{const p=JSON.parse(txt);if(typeof p==='object')txt=JSON.stringify(p,null,2);}catch{}
+  showResult(`Result #${id} — ${r.cmd_type||''}`,txt,`Status: ${r.status||''} · Completed: ${r.completed_at?new Date(r.completed_at).toLocaleString():'—'}`);
 }
 
-/* ---- init ---- */
+/* ── LIVE COMMAND ── */
+async function runLive(type,payload,maxWait){
+  maxWait=maxWait||120;
+  const r=await api('POST','/api/commands',{device_id:G.devId,cmd_type:type,payload:payload||{},confirm:true});
+  if(!r)throw new Error('auth');
+  for(let i=0;i<maxWait;i++){
+    await new Promise(res=>setTimeout(res,1000));
+    const res=await api('GET',`/api/commands/${r.id}/result`);
+    if(!res)throw new Error('auth');
+    if(['done','failed','timeout','cancelled'].includes(res.status))return{id:r.id,...res};
+  }
+  return{id:r.id,status:'timeout',result:'Timed out'};
+}
+
+/* ── RESULT MODAL ── */
+function showResult(title,body,meta,isErr){
+  document.getElementById('rm-title').textContent=title;
+  document.getElementById('rm-meta').textContent=meta||'';
+  const el=document.getElementById('rm-body');
+  el.textContent=body||'(empty)';
+  el.style.color=isErr?'var(--red)':'#9ccc65';
+  document.getElementById('result-modal').classList.add('open');
+}
+function closeResult(){document.getElementById('result-modal').classList.remove('open');}
+function copyResult(){navigator.clipboard.writeText(document.getElementById('rm-body').textContent||'').catch(()=>{});}
+
+/* ── AUDIT ── */
+function showAudit(){
+  document.getElementById('no-dev').style.display='none';
+  document.getElementById('page-device').classList.remove('on');
+  document.getElementById('page-audit').classList.add('on');
+  loadAudit();
+}
+async function loadAudit(){
+  const r=await api('GET','/api/audit')||{entries:[]};
+  const tb=document.getElementById('audit-tbody');
+  const entries=r.entries||[];
+  if(!entries.length){tb.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--muted);padding:20px">No audit entries</td></tr>';return;}
+  tb.innerHTML=entries.map(e=>`<tr><td style="font-family:var(--mono);font-size:11px;white-space:nowrap;color:var(--muted)">${new Date(e.ts).toLocaleString()}</td>
+    <td><span class="bdg bdg-b">${esc(e.action)}</span></td>
+    <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${esc(JSON.stringify(e.detail))}</td></tr>`).join('');
+}
+
+/* ── TOGGLE SECTION ── */
+function toggleSec(id){
+  const b=document.getElementById('sec-'+id+'-b');const h=document.getElementById('sec-'+id)?.querySelector('.sec-h');
+  if(!b)return;const hidden=b.style.display==='none';b.style.display=hidden?'':'none';
+  if(h)h.classList.toggle('open',hidden);
+}
+
+/* ── INIT ── */
+async function initApp(){
+  await loadDevices();
+  setInterval(async()=>{await loadDevices();},10000);
+}
 (async()=>{
   const w=await api('GET','/api/whoami')||{};
-  if(w.authed||w.open_mode){showApp();nav('devices');}else showLogin();
-  document.getElementById('login-pw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+  if(w.authed||w.open_mode){showApp();await initApp();}else showLogin();
+  document.getElementById('lpw').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 })();
 </script>
 </body>
