@@ -181,7 +181,8 @@ async def agent_register(request: Request):
     hostname     = body.get("hostname", "UNKNOWN")
     device_id    = machine_guid or hostname
     now          = datetime.now(timezone.utc).isoformat()
-    client_ip    = request.client.host if request.client else ""
+    # Prefer agent-reported IP (the server may be behind Docker NAT).
+    client_ip    = body.get("ip") or (request.client.host if request.client else "")
 
     with _db_lock:
         conn = db()
@@ -265,13 +266,14 @@ LONGPOLL_SECONDS = 20
 
 
 @app.get("/api/agent/poll")
-async def agent_poll(request: Request, device_id: str = "", token: str = ""):
+async def agent_poll(request: Request, device_id: str = "", token: str = "", ip: str = ""):
     """Long-poll: returns immediately if a command is queued, otherwise holds
     the connection up to LONGPOLL_SECONDS, checking once a second."""
     if not device_id or not token:
         raise HTTPException(400, "device_id and token required")
 
-    client_ip = request.client.host if request.client else ""
+    # Use agent-reported IP if provided (avoids Docker bridge NAT masquerade).
+    client_ip = ip or (request.client.host if request.client else "")
     deadline = time.time() + LONGPOLL_SECONDS
     first = True
     while True:
@@ -374,6 +376,7 @@ async def get_device_inventory(request: Request, device_id: str):
     return {"inventory": inv}
 
 
+@app.get("/api/devices")
 async def get_devices(request: Request):
     require_auth(request)
     conn = db()
